@@ -104,7 +104,8 @@ function SidebarNav({ categories, activeCatId, isLoading, onSelect }: SidebarNav
 }
 
 export function LivePage() {
-  const { play } = useSearch({ from: '/_authenticated/live' });
+  const searchParams = useSearch({ from: '/_authenticated/live' });
+  const play = searchParams.play;
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -158,6 +159,8 @@ export function LivePage() {
             streamType="live"
             streamId={play}
             streamName={currentStreamName || undefined}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TanStack Router search params type requires cast
+            onClose={() => navigate({ search: { ...searchParams, play: undefined } } as any)}
           />
         </div>
       )}
