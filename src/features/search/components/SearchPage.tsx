@@ -56,6 +56,79 @@ function FocusableTab({
   );
 }
 
+function FocusableSearchInput({ inputRef, query, setQuery }: {
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  query: string;
+  setQuery: (q: string) => void;
+}) {
+  const inputMode = useUIStore((s) => s.inputMode);
+  const { ref: focusRef, focused } = useFocusable({
+    onEnterPress: () => inputRef.current?.focus(),
+  });
+  const showFocus = focused && inputMode === 'keyboard';
+
+  return (
+    <div ref={focusRef} className="relative">
+      <svg
+        className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+      <input
+        ref={inputRef}
+        type="text"
+        placeholder="Search live TV, movies, series..."
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        className={`w-full pl-12 pr-4 py-3 bg-surface border rounded-xl text-text-primary placeholder:text-text-muted text-base focus:outline-none focus:ring-2 focus:ring-teal/50 focus:border-teal transition-all ${
+          showFocus ? 'border-teal ring-2 ring-teal/50' : 'border-white/10'
+        }`}
+      />
+      {query && (
+        <button
+          onClick={() => setQuery('')}
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors"
+          aria-label="Clear search"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      )}
+    </div>
+  );
+}
+
+function FocusablePill({ label, isActive, onSelect }: {
+  label: string;
+  isActive: boolean;
+  onSelect: () => void;
+}) {
+  const inputMode = useUIStore((s) => s.inputMode);
+  const { ref, focused } = useFocusable({ onEnterPress: onSelect });
+  const showFocus = focused && inputMode === 'keyboard';
+
+  return (
+    <button
+      ref={ref}
+      onClick={onSelect}
+      className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-medium transition-all min-h-[36px] ${
+        isActive
+          ? 'bg-teal/15 text-teal border border-teal/30'
+          : showFocus
+            ? 'bg-surface-raised text-text-primary border border-teal ring-2 ring-teal/50'
+            : 'bg-surface-raised text-text-muted border border-border-subtle hover:text-text-secondary hover:border-border'
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
 export function SearchPage() {
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('all');
@@ -145,68 +218,37 @@ export function SearchPage() {
     saveLastFocusedChild: true,
   });
 
+  const { ref: langRef, focusKey: langFocusKey } = useFocusable({
+    focusKey: 'search-langs',
+    trackChildren: true,
+    saveLastFocusedChild: true,
+  });
+
   return (
     <PageTransition>
     <div className="space-y-6">
       {/* Search Input */}
-      <div className="relative">
-        <svg
-          className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-        <input
-          ref={inputRef}
-          type="text"
-          placeholder="Search live TV, movies, series..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="w-full pl-12 pr-4 py-3 bg-surface border border-white/10 rounded-xl text-text-primary placeholder:text-text-muted text-base focus:outline-none focus:ring-2 focus:ring-teal/50 focus:border-teal transition-all"
-        />
-        {query && (
-          <button
-            onClick={() => setQuery('')}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors"
-            aria-label="Clear search"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        )}
-      </div>
+      <FocusableSearchInput inputRef={inputRef} query={query} setQuery={setQuery} />
 
       {/* Language Filter Pills */}
       {hasQuery && languages.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-          <button
-            onClick={() => setActiveLang(null)}
-            className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-medium transition-all min-h-[36px] ${
-              activeLang === null
-                ? 'bg-teal/15 text-teal border border-teal/30'
-                : 'bg-surface-raised text-text-muted border border-border-subtle hover:text-text-secondary hover:border-border'
-            }`}
-          >
-            All Languages
-          </button>
-          {languages.map((lang) => (
-            <button
-              key={lang}
-              onClick={() => setActiveLang(activeLang === lang ? null : lang)}
-              className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-medium transition-all min-h-[36px] ${
-                activeLang === lang
-                  ? 'bg-teal/15 text-teal border border-teal/30'
-                  : 'bg-surface-raised text-text-muted border border-border-subtle hover:text-text-secondary hover:border-border'
-              }`}
-            >
-              {lang}
-            </button>
-          ))}
-        </div>
+        <FocusContext.Provider value={langFocusKey}>
+          <div ref={langRef} className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+            <FocusablePill
+              label="All Languages"
+              isActive={activeLang === null}
+              onSelect={() => setActiveLang(null)}
+            />
+            {languages.map((lang) => (
+              <FocusablePill
+                key={lang}
+                label={lang}
+                isActive={activeLang === lang}
+                onSelect={() => setActiveLang(activeLang === lang ? null : lang)}
+              />
+            ))}
+          </div>
+        </FocusContext.Provider>
       )}
 
       {/* Tabs — wrapped in spatial nav context */}

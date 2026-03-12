@@ -1,5 +1,7 @@
 import { type SortOption, SORT_OPTIONS } from '@shared/utils/sortContent';
 import type { FilterState } from '@shared/utils/filterContent';
+import { useFocusable, FocusContext } from '@noriginmedia/norigin-spatial-navigation';
+import { useUIStore } from '@lib/store';
 
 interface SortFilterBarProps {
   sort: SortOption;
@@ -9,10 +11,44 @@ interface SortFilterBarProps {
   genres: string[];
 }
 
+function FocusableChip({ label, isActive, onSelect, activeClass, inactiveClass }: {
+  label: string;
+  isActive: boolean;
+  onSelect: () => void;
+  activeClass: string;
+  inactiveClass: string;
+}) {
+  const inputMode = useUIStore((s) => s.inputMode);
+  const { ref, focused } = useFocusable({ onEnterPress: onSelect });
+  const showFocus = focused && inputMode === 'keyboard';
+
+  return (
+    <button
+      ref={ref}
+      onClick={onSelect}
+      className={isActive ? activeClass : showFocus ? `${inactiveClass} ring-2 ring-teal/50` : inactiveClass}
+    >
+      {label}
+    </button>
+  );
+}
+
 export function SortFilterBar({ sort, onSortChange, filters, onFiltersChange, genres }: SortFilterBarProps) {
+  const { ref: ratingRef, focusKey: ratingFocusKey } = useFocusable({
+    focusKey: 'vod-rating-filter',
+    trackChildren: true,
+    saveLastFocusedChild: true,
+  });
+
+  const { ref: genreRef, focusKey: genreFocusKey } = useFocusable({
+    focusKey: 'vod-genre-filter',
+    trackChildren: true,
+    saveLastFocusedChild: true,
+  });
+
   return (
     <div className="flex flex-wrap items-center gap-3 mb-4">
-      {/* Sort dropdown */}
+      {/* Sort dropdown - native select works with D-pad */}
       <select
         value={`${sort.field}-${sort.direction}`}
         onChange={(e) => {
@@ -29,49 +65,44 @@ export function SortFilterBar({ sort, onSortChange, filters, onFiltersChange, ge
       </select>
 
       {/* Rating filter */}
-      <div className="flex gap-1">
-        {[null, 3.5, 4].map((r) => (
-          <button
-            key={r ?? 'all'}
-            onClick={() => onFiltersChange({ ...filters, minRating: r })}
-            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
-              filters.minRating === r
-                ? 'bg-warning/15 text-warning border border-warning/30'
-                : 'bg-surface-raised text-text-muted border border-border hover:text-text-secondary'
-            }`}
-          >
-            {r === null ? 'Any' : `${r}+`} ★
-          </button>
-        ))}
-      </div>
-
-      {/* Genre chips - scrollable */}
-      {genres.length > 0 && (
-        <div className="flex gap-1.5 overflow-x-auto pb-1 max-w-[50%]">
-          <button
-            onClick={() => onFiltersChange({ ...filters, genre: null })}
-            className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all ${
-              !filters.genre
-                ? 'bg-teal/15 text-teal border border-teal/30'
-                : 'bg-surface-raised text-text-muted border border-border hover:text-text-secondary'
-            }`}
-          >
-            All Genres
-          </button>
-          {genres.slice(0, 15).map((g) => (
-            <button
-              key={g}
-              onClick={() => onFiltersChange({ ...filters, genre: filters.genre === g ? null : g })}
-              className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all ${
-                filters.genre === g
-                  ? 'bg-teal/15 text-teal border border-teal/30'
-                  : 'bg-surface-raised text-text-muted border border-border hover:text-text-secondary'
-              }`}
-            >
-              {g}
-            </button>
+      <FocusContext.Provider value={ratingFocusKey}>
+        <div ref={ratingRef} className="flex gap-1">
+          {[null, 3.5, 4].map((r) => (
+            <FocusableChip
+              key={r ?? 'all'}
+              label={`${r === null ? 'Any' : `${r}+`} ★`}
+              isActive={filters.minRating === r}
+              onSelect={() => onFiltersChange({ ...filters, minRating: r })}
+              activeClass="px-2.5 py-1 rounded-md text-xs font-medium transition-all bg-warning/15 text-warning border border-warning/30"
+              inactiveClass="px-2.5 py-1 rounded-md text-xs font-medium transition-all bg-surface-raised text-text-muted border border-border hover:text-text-secondary"
+            />
           ))}
         </div>
+      </FocusContext.Provider>
+
+      {/* Genre chips */}
+      {genres.length > 0 && (
+        <FocusContext.Provider value={genreFocusKey}>
+          <div ref={genreRef} className="flex gap-1.5 overflow-x-auto pb-1 max-w-[50%]">
+            <FocusableChip
+              label="All Genres"
+              isActive={!filters.genre}
+              onSelect={() => onFiltersChange({ ...filters, genre: null })}
+              activeClass="px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all bg-teal/15 text-teal border border-teal/30"
+              inactiveClass="px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all bg-surface-raised text-text-muted border border-border hover:text-text-secondary"
+            />
+            {genres.slice(0, 15).map((g) => (
+              <FocusableChip
+                key={g}
+                label={g}
+                isActive={filters.genre === g}
+                onSelect={() => onFiltersChange({ ...filters, genre: filters.genre === g ? null : g })}
+                activeClass="px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all bg-teal/15 text-teal border border-teal/30"
+                inactiveClass="px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all bg-surface-raised text-text-muted border border-border hover:text-text-secondary"
+              />
+            ))}
+          </div>
+        </FocusContext.Provider>
       )}
     </div>
   );

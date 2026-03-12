@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from '@tanstack/react-router';
+import { useFocusable, FocusContext } from '@noriginmedia/norigin-spatial-navigation';
 import { useWatchHistory, useClearHistory } from '../api';
-import { usePlayerStore } from '@lib/store';
+import { usePlayerStore, useUIStore } from '@lib/store';
 import { EmptyState } from '@shared/components/EmptyState';
 import { formatDuration, formatTimeAgo } from '@shared/utils/formatDuration';
 import { PageTransition } from '@shared/components/PageTransition';
@@ -22,12 +23,140 @@ const contentTypeIcons: Record<ContentType, string> = {
   series: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10',
 };
 
+function FocusableFilterTab({ label, isActive, onSelect }: {
+  label: string;
+  isActive: boolean;
+  onSelect: () => void;
+}) {
+  const inputMode = useUIStore((s) => s.inputMode);
+  const { ref, focused } = useFocusable({ onEnterPress: onSelect });
+  const showFocus = focused && inputMode === 'keyboard';
+
+  return (
+    <button
+      ref={ref}
+      onClick={onSelect}
+      className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+        isActive
+          ? 'bg-teal/10 text-teal'
+          : showFocus
+            ? 'text-text-primary bg-surface-raised ring-2 ring-teal/50'
+            : 'text-text-muted hover:text-text-primary'
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function FocusableHistoryItem({ item, progress, onClick }: {
+  item: { content_icon?: string | null; content_name?: string | null; content_type: ContentType; content_id: number; duration_seconds: number; progress_seconds: number; watched_at: string };
+  progress: number;
+  onClick: () => void;
+}) {
+  const inputMode = useUIStore((s) => s.inputMode);
+  const { ref, focused } = useFocusable({
+    onEnterPress: onClick,
+    onFocus: ({ node }) => {
+      node?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+    },
+  });
+  const showFocus = focused && inputMode === 'keyboard';
+
+  return (
+    <div
+      ref={ref}
+      onClick={onClick}
+      className={`group flex items-center gap-4 p-3 bg-surface-raised border rounded-lg cursor-pointer transition-all ${
+        showFocus
+          ? 'border-teal ring-2 ring-teal/50 shadow-[0_0_15px_rgba(45,212,191,0.1)]'
+          : 'border-border-subtle hover:border-teal/30 hover:shadow-[0_0_15px_rgba(45,212,191,0.1)]'
+      }`}
+    >
+      {/* Icon/Poster */}
+      <div className="w-16 h-16 flex-shrink-0 rounded-md overflow-hidden bg-surface flex items-center justify-center">
+        {item.content_icon ? (
+          <img
+            src={item.content_icon}
+            alt={item.content_name || ''}
+            loading="lazy"
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+        ) : null}
+        <svg
+          className="w-6 h-6 text-text-muted/30 absolute"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={1.5}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d={contentTypeIcons[item.content_type]}
+          />
+        </svg>
+      </div>
+
+      {/* Info */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-medium text-text-primary truncate">
+            {item.content_name || `${item.content_type} #${item.content_id}`}
+          </h3>
+          <span className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-medium rounded bg-surface text-text-muted uppercase">
+            {item.content_type === 'channel' ? 'live' : item.content_type}
+          </span>
+        </div>
+
+        {item.duration_seconds > 0 && (
+          <div className="mt-2 flex items-center gap-2">
+            <div className="flex-1 h-1.5 bg-surface rounded-full overflow-hidden">
+              <div
+                className="h-full bg-teal rounded-full transition-all"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <span className="text-[10px] text-text-muted flex-shrink-0">
+              {formatDuration(item.progress_seconds)} / {formatDuration(item.duration_seconds)}
+            </span>
+          </div>
+        )}
+
+        <p className="text-xs text-text-muted mt-1">
+          {formatTimeAgo(item.watched_at)}
+        </p>
+      </div>
+
+      {/* Continue indicator - always visible on TV */}
+      <div className={`flex-shrink-0 px-3 py-1.5 text-xs font-medium text-teal bg-teal/10 rounded-lg transition-all ${showFocus ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+        Continue
+      </div>
+    </div>
+  );
+}
+
 export function HistoryPage() {
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
   const { data: history, isLoading } = useWatchHistory();
   const clearHistory = useClearHistory();
   const playStream = usePlayerStore((s) => s.playStream);
+
+  const { ref: tabsRef, focusKey: tabsFocusKey } = useFocusable({
+    focusKey: 'history-tabs',
+    trackChildren: true,
+    saveLastFocusedChild: true,
+  });
+
+  const { ref: listRef, focusKey: listFocusKey } = useFocusable({
+    focusKey: 'history-list',
+    trackChildren: true,
+    saveLastFocusedChild: true,
+  });
 
   const filteredHistory = useMemo(() => {
     if (!history) return [];
@@ -72,21 +201,18 @@ export function HistoryPage() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex gap-1 mb-6 bg-surface rounded-lg p-1 w-fit">
-        {filterTabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveFilter(tab.key)}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-              activeFilter === tab.key
-                ? 'bg-teal/10 text-teal'
-                : 'text-text-muted hover:text-text-primary'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <FocusContext.Provider value={tabsFocusKey}>
+        <div ref={tabsRef} className="flex gap-1 mb-6 bg-surface rounded-lg p-1 w-fit">
+          {filterTabs.map((tab) => (
+            <FocusableFilterTab
+              key={tab.key}
+              label={tab.label}
+              isActive={activeFilter === tab.key}
+              onSelect={() => setActiveFilter(tab.key)}
+            />
+          ))}
+        </div>
+      </FocusContext.Provider>
 
       {/* Content */}
       {isLoading ? (
@@ -109,89 +235,21 @@ export function HistoryPage() {
           icon="history"
         />
       ) : (
-        <div className="space-y-2">
-          {filteredHistory.map((item) => {
-            const progress = getProgressPercent(item);
-            return (
-              <div
-                key={`${item.content_type}-${item.content_id}-${item.id}`}
-                onClick={() => handleItemClick(item)}
-                className="group flex items-center gap-4 p-3 bg-surface-raised border border-border-subtle rounded-lg cursor-pointer hover:border-teal/30 hover:shadow-[0_0_15px_rgba(45,212,191,0.1)] transition-all"
-              >
-                {/* Icon/Poster */}
-                <div className="w-16 h-16 flex-shrink-0 rounded-md overflow-hidden bg-surface flex items-center justify-center">
-                  {item.content_icon ? (
-                    <img
-                      src={item.content_icon}
-                      alt={item.content_name || ''}
-                      loading="lazy"
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
-                  ) : null}
-                  {/* Fallback icon */}
-                  <svg
-                    className="w-6 h-6 text-text-muted/30 absolute"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={1.5}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d={contentTypeIcons[item.content_type]}
-                    />
-                  </svg>
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-medium text-text-primary truncate">
-                      {item.content_name || `${item.content_type} #${item.content_id}`}
-                    </h3>
-                    <span className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-medium rounded bg-surface text-text-muted uppercase">
-                      {item.content_type === 'channel' ? 'live' : item.content_type}
-                    </span>
-                  </div>
-
-                  {/* Progress bar */}
-                  {item.duration_seconds > 0 && (
-                    <div className="mt-2 flex items-center gap-2">
-                      <div className="flex-1 h-1.5 bg-surface rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-teal rounded-full transition-all"
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
-                      <span className="text-[10px] text-text-muted flex-shrink-0">
-                        {formatDuration(item.progress_seconds)} / {formatDuration(item.duration_seconds)}
-                      </span>
-                    </div>
-                  )}
-
-                  <p className="text-xs text-text-muted mt-1">
-                    {formatTimeAgo(item.watched_at)}
-                  </p>
-                </div>
-
-                {/* Continue button */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleItemClick(item);
-                  }}
-                  className="flex-shrink-0 px-3 py-1.5 text-xs font-medium text-teal bg-teal/10 hover:bg-teal/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                >
-                  Continue
-                </button>
-              </div>
-            );
-          })}
-        </div>
+        <FocusContext.Provider value={listFocusKey}>
+          <div ref={listRef} className="space-y-2">
+            {filteredHistory.map((item) => {
+              const progress = getProgressPercent(item);
+              return (
+                <FocusableHistoryItem
+                  key={`${item.content_type}-${item.content_id}-${item.id}`}
+                  item={item}
+                  progress={progress}
+                  onClick={() => handleItemClick(item)}
+                />
+              );
+            })}
+          </div>
+        </FocusContext.Provider>
       )}
     </div>
     </PageTransition>

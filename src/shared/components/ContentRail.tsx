@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useFocusable, FocusContext } from '@noriginmedia/norigin-spatial-navigation';
+import { useUIStore } from '@lib/store';
 import { HorizontalScroll } from './HorizontalScroll';
 
 interface ContentRailProps {
@@ -12,6 +13,31 @@ interface ContentRailProps {
   isEmpty?: boolean;
   isLoading?: boolean;
   focusKey?: string;
+}
+
+function FocusableSeeAll({ to }: { to: string }) {
+  const inputMode = useUIStore((s) => s.inputMode);
+  const { ref, focused } = useFocusable({
+    onEnterPress: () => {
+      // Programmatic navigation handled by Link click
+      ref.current?.querySelector('a')?.click();
+    },
+  });
+  const showFocus = focused && inputMode === 'keyboard';
+
+  return (
+    <div ref={ref}>
+      <Link
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        to={to as any}
+        className={`text-sm text-teal hover:text-teal/80 transition-colors whitespace-nowrap min-h-[44px] flex items-center ${
+          showFocus ? 'ring-2 ring-teal/50 rounded px-2' : ''
+        }`}
+      >
+        See All →
+      </Link>
+    </div>
+  );
 }
 
 export function ContentRail({
@@ -41,13 +67,7 @@ export function ContentRail({
             {title}
           </h2>
           {seeAllTo && (
-            <Link
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              to={seeAllTo as any}
-              className="text-sm text-teal hover:text-teal/80 transition-colors whitespace-nowrap min-h-[44px] flex items-center"
-            >
-              See All →
-            </Link>
+            <FocusableSeeAll to={seeAllTo} />
           )}
         </div>
 

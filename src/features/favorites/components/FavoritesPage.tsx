@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from '@tanstack/react-router';
+import { useFocusable, FocusContext } from '@noriginmedia/norigin-spatial-navigation';
 import { useFavorites, useRemoveFavorite } from '../api';
 import { ContentCard } from '@shared/components/ContentCard';
 import { EmptyState } from '@shared/components/EmptyState';
 import { SkeletonGrid } from '@shared/components/Skeleton';
 import { PageTransition } from '@shared/components/PageTransition';
+import { useUIStore } from '@lib/store';
 import type { ContentType, DbFavorite } from '@shared/types/api';
 
 type TabFilter = 'all' | ContentType;
@@ -16,11 +18,45 @@ const TABS: { key: TabFilter; label: string }[] = [
   { key: 'series', label: 'Series' },
 ];
 
+function FocusableTab({ label, count, isActive, onSelect }: {
+  label: string;
+  count: number;
+  isActive: boolean;
+  onSelect: () => void;
+}) {
+  const inputMode = useUIStore((s) => s.inputMode);
+  const { ref, focused } = useFocusable({ onEnterPress: onSelect });
+  const showFocus = focused && inputMode === 'keyboard';
+
+  return (
+    <button
+      ref={ref}
+      onClick={onSelect}
+      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+        isActive
+          ? 'bg-teal/10 text-teal border border-teal/30'
+          : showFocus
+            ? 'bg-surface-raised text-text-primary border border-teal ring-2 ring-teal/50'
+            : 'bg-surface-raised text-text-secondary hover:text-text-primary hover:bg-surface-raised/80 border border-white/10'
+      }`}
+    >
+      {label}
+      <span className="ml-1.5 text-xs opacity-70">{count}</span>
+    </button>
+  );
+}
+
 export function FavoritesPage() {
   const [activeTab, setActiveTab] = useState<TabFilter>('all');
   const { data: favorites, isLoading } = useFavorites();
   const removeFavorite = useRemoveFavorite();
   const navigate = useNavigate();
+
+  const { ref: tabsRef, focusKey: tabsFocusKey } = useFocusable({
+    focusKey: 'favorites-tabs',
+    trackChildren: true,
+    saveLastFocusedChild: true,
+  });
 
   const counts = useMemo(() => {
     if (!favorites) return { all: 0, channel: 0, vod: 0, series: 0 };
@@ -73,24 +109,19 @@ export function FavoritesPage() {
       <h1 className="font-display text-2xl font-bold text-text-primary mb-6">Favorites</h1>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6">
-        {TABS.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeTab === tab.key
-                ? 'bg-teal/10 text-teal border border-teal/30'
-                : 'bg-surface-raised text-text-secondary hover:text-text-primary hover:bg-surface-raised/80 border border-white/10'
-            }`}
-          >
-            {tab.label}
-            <span className="ml-1.5 text-xs opacity-70">
-              {counts[tab.key]}
-            </span>
-          </button>
-        ))}
-      </div>
+      <FocusContext.Provider value={tabsFocusKey}>
+        <div ref={tabsRef} className="flex gap-2 mb-6">
+          {TABS.map((tab) => (
+            <FocusableTab
+              key={tab.key}
+              label={tab.label}
+              count={counts[tab.key]}
+              isActive={activeTab === tab.key}
+              onSelect={() => setActiveTab(tab.key)}
+            />
+          ))}
+        </div>
+      </FocusContext.Provider>
 
       {/* Content */}
       {isLoading ? (

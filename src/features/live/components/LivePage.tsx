@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useSearch, useNavigate } from '@tanstack/react-router';
 import { useFocusable, FocusContext } from '@noriginmedia/norigin-spatial-navigation';
 import { useLiveCategories, useLiveStreams } from '../api';
@@ -66,6 +66,62 @@ function SidebarCategoryButton({
     >
       {cat.category_name}
     </button>
+  );
+}
+
+function FocusableViewToggle({ isActive, onSelect, title, icon }: {
+  mode?: string;
+  isActive: boolean;
+  onSelect: () => void;
+  title: string;
+  icon: React.ReactNode;
+}) {
+  const inputMode = useUIStore((s) => s.inputMode);
+  const { ref, focused } = useFocusable({ onEnterPress: onSelect });
+  const showFocus = focused && inputMode === 'keyboard';
+
+  return (
+    <button
+      ref={ref}
+      onClick={onSelect}
+      className={`p-2 transition-colors ${
+        isActive
+          ? 'bg-teal/15 text-teal'
+          : showFocus
+            ? 'text-text-primary ring-2 ring-teal/50'
+            : 'text-text-muted hover:text-text-primary'
+      }`}
+      title={title}
+    >
+      {icon}
+    </button>
+  );
+}
+
+function FocusableLiveSearch({ searchQuery, setSearchQuery }: {
+  searchQuery: string;
+  setSearchQuery: (q: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const inputMode = useUIStore((s) => s.inputMode);
+  const { ref: focusRef, focused } = useFocusable({
+    onEnterPress: () => inputRef.current?.focus(),
+  });
+  const showFocus = focused && inputMode === 'keyboard';
+
+  return (
+    <div ref={focusRef} className="flex-1 max-w-sm">
+      <input
+        ref={inputRef}
+        type="text"
+        placeholder="Filter channels..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        className={`w-full px-4 py-2 bg-surface-raised border rounded-lg text-text-primary placeholder:text-text-muted text-sm focus:outline-none focus:ring-2 focus:ring-teal/50 focus:border-teal-dim transition-all ${
+          showFocus ? 'border-teal ring-2 ring-teal/50' : 'border-border'
+        }`}
+      />
+    </div>
   );
 }
 
@@ -182,42 +238,32 @@ export function LivePage() {
         <div className="flex-1 min-w-0">
           {/* Top bar: Search + View toggle */}
           <div className="flex items-center gap-3 mb-4">
-            <input
-              type="text"
-              placeholder="Filter channels..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 max-w-sm px-4 py-2 bg-surface-raised border border-border rounded-lg text-text-primary placeholder:text-text-muted text-sm focus:outline-none focus:ring-2 focus:ring-teal/50 focus:border-teal-dim transition-all"
-            />
+            <FocusableLiveSearch searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
 
             {/* View mode toggle */}
             <div className="flex items-center bg-surface-raised border border-border rounded-lg overflow-hidden">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-2 transition-colors ${
-                  viewMode === 'grid'
-                    ? 'bg-teal/15 text-teal'
-                    : 'text-text-muted hover:text-text-primary'
-                }`}
+              <FocusableViewToggle
+                mode="grid"
+                isActive={viewMode === 'grid'}
+                onSelect={() => setViewMode('grid')}
                 title="Grid view"
-              >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 0h7v7h-7v-7z" />
-                </svg>
-              </button>
-              <button
-                onClick={() => setViewMode('epg')}
-                className={`p-2 transition-colors ${
-                  viewMode === 'epg'
-                    ? 'bg-teal/15 text-teal'
-                    : 'text-text-muted hover:text-text-primary'
-                }`}
+                icon={
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 0h7v7h-7v-7z" />
+                  </svg>
+                }
+              />
+              <FocusableViewToggle
+                mode="epg"
+                isActive={viewMode === 'epg'}
+                onSelect={() => setViewMode('epg')}
                 title="EPG guide"
-              >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M3 4h18v2H3V4zm0 5h18v2H3V9zm0 5h18v2H3v-2zm0 5h18v2H3v-2z" />
-                </svg>
-              </button>
+                icon={
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M3 4h18v2H3V4zm0 5h18v2H3V9zm0 5h18v2H3v-2zm0 5h18v2H3v-2z" />
+                  </svg>
+                }
+              />
             </div>
           </div>
 
