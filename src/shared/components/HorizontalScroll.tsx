@@ -1,5 +1,29 @@
 import { useRef, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useUIStore } from '@lib/store';
+import { useFocusable } from '@noriginmedia/norigin-spatial-navigation';
+
+function FocusableScrollArrow({ direction, onClick, arrowOpacity }: {
+  direction: 'left' | 'right';
+  onClick: () => void;
+  arrowOpacity: string;
+}) {
+  const inputMode = useUIStore((s) => s.inputMode);
+  const { ref, focused } = useFocusable({ onEnterPress: onClick });
+  const showFocus = focused && inputMode === 'keyboard';
+
+  return (
+    <button
+      ref={ref}
+      onClick={onClick}
+      className={`absolute ${direction === 'left' ? 'left-0' : 'right-0'} top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-obsidian/80 border border-border-subtle text-text-primary transition-opacity duration-200 hover:bg-surface-raised hover:border-teal/30 ${showFocus ? 'opacity-100 ring-2 ring-teal' : arrowOpacity}`}
+      aria-label={`Scroll ${direction}`}
+    >
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d={direction === 'left' ? 'M15 19l-7-7 7-7' : 'M9 5l7 7-7 7'} />
+      </svg>
+    </button>
+  );
+}
 
 interface HorizontalScrollProps {
   children: ReactNode;
@@ -53,16 +77,7 @@ export function HorizontalScroll({ children, className = '' }: HorizontalScrollP
     <div className={`group/scroll relative ${className}`}>
       {/* Left arrow */}
       {canScrollLeft && (
-        <button
-          onClick={() => scroll('left')}
-          className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-obsidian/80 border border-border-subtle text-text-primary transition-opacity duration-200 hover:bg-surface-raised hover:border-teal/30 ${arrowOpacity}`}
-          aria-label="Scroll left"
-          tabIndex={-1}
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
+        <FocusableScrollArrow direction="left" onClick={() => scroll('left')} arrowOpacity={arrowOpacity} />
       )}
 
       {/* Scrollable area */}
@@ -75,16 +90,7 @@ export function HorizontalScroll({ children, className = '' }: HorizontalScrollP
 
       {/* Right arrow */}
       {canScrollRight && (
-        <button
-          onClick={() => scroll('right')}
-          className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-obsidian/80 border border-border-subtle text-text-primary transition-opacity duration-200 hover:bg-surface-raised hover:border-teal/30 ${arrowOpacity}`}
-          aria-label="Scroll right"
-          tabIndex={-1}
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
+        <FocusableScrollArrow direction="right" onClick={() => scroll('right')} arrowOpacity={arrowOpacity} />
       )}
     </div>
   );
