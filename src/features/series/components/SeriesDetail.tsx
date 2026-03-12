@@ -49,11 +49,34 @@ export function SeriesDetail() {
     }) ?? null;
   }, [watchHistory, data?.info.name]);
 
-  // Sort seasons ascending
-  const sortedSeasons = useMemo(() => {
-    if (!data?.seasons?.length) return [];
-    return [...data.seasons].sort((a, b) => a.season_number - b.season_number);
-  }, [data?.seasons]);
+  // Dynamically compute seasons since some API responses omit data.seasons but populate data.episodes
+  const computedSeasons = useMemo(() => {
+    const seasonsMap = new Map<number, { season_number: number; name: string; episode_count: number }>();
+    if (data?.seasons) {
+      const explicitSeasons = Array.isArray(data.seasons) ? data.seasons : Object.values(data.seasons) as any[];
+      explicitSeasons.forEach((s) => {
+        if (s && typeof s.season_number === 'number') {
+          seasonsMap.set(s.season_number, s);
+        }
+      });
+    }
+    if (data?.episodes) {
+      Object.keys(data.episodes).forEach((seasonStr) => {
+        const sNum = parseInt(seasonStr, 10);
+        if (!isNaN(sNum) && !seasonsMap.has(sNum)) {
+          const eps = data.episodes[seasonStr];
+          if (Array.isArray(eps) && eps.length > 0) {
+            seasonsMap.set(sNum, {
+              season_number: sNum,
+              name: `Season ${sNum}`,
+              episode_count: eps.length,
+            });
+          }
+        }
+      });
+    }
+    return Array.from(seasonsMap.values()).sort((a, b) => a.season_number - b.season_number);
+  }, [data?.seasons, data?.episodes]);
 
   // All episodes for active season, sorted
   const allEpisodes = useMemo(() => {
@@ -66,13 +89,15 @@ export function SeriesDetail() {
         return sorted.sort((a, b) => {
           const aAdded = parseInt(a.added || '0', 10);
           const bAdded = parseInt(b.added || '0', 10);
-          return bAdded - aAdded;
+          if (aAdded !== bAdded) return bAdded - aAdded;
+          return b.episode_num - a.episode_num; // Fallback to descending episode
         });
       case 'oldest':
         return sorted.sort((a, b) => {
           const aAdded = parseInt(a.added || '0', 10);
           const bAdded = parseInt(b.added || '0', 10);
-          return aAdded - bAdded;
+          if (aAdded !== bAdded) return aAdded - bAdded;
+          return a.episode_num - b.episode_num; // Fallback to ascending episode
         });
       case 'episode':
         return sorted.sort((a, b) => a.episode_num - b.episode_num);
@@ -102,10 +127,10 @@ export function SeriesDetail() {
 
   // Auto-select latest season when data loads
   useEffect(() => {
-    if (!sortedSeasons.length || activeSeason !== null) return;
-    const latestSeason = sortedSeasons[sortedSeasons.length - 1];
+    if (!computedSeasons.length || activeSeason !== null) return;
+    const latestSeason = computedSeasons[computedSeasons.length - 1];
     if (latestSeason) setActiveSeason(latestSeason.season_number);
-  }, [sortedSeasons, activeSeason]);
+  }, [computedSeasons, activeSeason]);
 
   // Reset visible count when season/sort/search changes
   useEffect(() => {
@@ -158,14 +183,14 @@ export function SeriesDetail() {
 
   // Season tab keyboard navigation
   const handleSeasonKeyDown = (e: React.KeyboardEvent) => {
-    const currentIdx = sortedSeasons.findIndex((s) => s.season_number === activeSeason);
+    const currentIdx = computedSeasons.findIndex((s) => s.season_number === activeSeason);
     if (e.key === 'ArrowRight') {
       e.preventDefault();
-      const next = sortedSeasons[Math.min(currentIdx + 1, sortedSeasons.length - 1)];
+      const next = computedSeasons[Math.min(currentIdx + 1, computedSeasons.length - 1)];
       if (next) setActiveSeason(next.season_number);
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
-      const prev = sortedSeasons[Math.max(currentIdx - 1, 0)];
+      const prev = computedSeasons[Math.max(currentIdx - 1, 0)];
       if (prev) setActiveSeason(prev.season_number);
     }
   };
@@ -363,7 +388,7 @@ export function SeriesDetail() {
             onKeyDown={handleSeasonKeyDown}
             role="tablist"
           >
-            {sortedSeasons.map((season) => (
+            {computedSeasons.map((season) => (
               <button
                 key={season.season_number}
                 role="tab"
