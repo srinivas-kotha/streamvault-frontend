@@ -51,6 +51,37 @@ function FocusableInput({ id, type = 'text', placeholder, autoComplete, error, r
   );
 }
 
+function FocusableSubmitButton({ isPending }: { isPending: boolean }) {
+  const { ref, focused } = useFocusable({
+    onEnterPress: () => {
+      document.querySelector<HTMLButtonElement>('#login-submit')?.click();
+    },
+  });
+
+  return (
+    <div ref={ref}>
+      <button
+        id="login-submit"
+        type="submit"
+        disabled={isPending}
+        className={`w-full py-2.5 px-4 bg-gradient-to-r from-teal-dim to-teal rounded-lg font-medium text-obsidian hover:opacity-90 disabled:opacity-50 transition-all focus:outline-none focus:ring-2 focus:ring-teal/50 focus:ring-offset-2 focus:ring-offset-obsidian ${focused ? 'ring-2 ring-teal/50 ring-offset-2 ring-offset-obsidian opacity-90' : ''}`}
+      >
+        {isPending ? (
+          <span className="flex items-center justify-center gap-2">
+            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            Signing in...
+          </span>
+        ) : (
+          'Sign In'
+        )}
+      </button>
+    </div>
+  );
+}
+
 export function LoginPage() {
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>();
   const loginMutation = useLogin();
@@ -59,12 +90,6 @@ export function LoginPage() {
     focusKey: 'login-form',
     trackChildren: true,
     saveLastFocusedChild: true,
-  });
-
-  const { ref: buttonRef, focused: buttonFocused } = useFocusable({
-    onEnterPress: () => {
-      document.querySelector<HTMLButtonElement>('#login-submit')?.click();
-    },
   });
 
   useEffect(() => {
@@ -131,26 +156,7 @@ export function LoginPage() {
                 </div>
               )}
 
-              <div ref={buttonRef}>
-                <button
-                  id="login-submit"
-                  type="submit"
-                  disabled={loginMutation.isPending}
-                  className={`w-full py-2.5 px-4 bg-gradient-to-r from-teal-dim to-teal rounded-lg font-medium text-obsidian hover:opacity-90 disabled:opacity-50 transition-all focus:outline-none focus:ring-2 focus:ring-teal/50 focus:ring-offset-2 focus:ring-offset-obsidian ${buttonFocused ? 'ring-2 ring-teal/50 ring-offset-2 ring-offset-obsidian opacity-90' : ''}`}
-                >
-                  {loginMutation.isPending ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                      Signing in...
-                    </span>
-                  ) : (
-                    'Sign In'
-                  )}
-                </button>
-              </div>
+              <FocusableSubmitButton isPending={loginMutation.isPending} />
             </form>
           </FocusContext.Provider>
         </div>

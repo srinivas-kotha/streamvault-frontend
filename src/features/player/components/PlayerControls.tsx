@@ -34,6 +34,45 @@ function FocusableButton({
   );
 }
 
+function FocusableVolumeSlider({ volume, isMuted, onVolumeChange }: {
+  volume: number;
+  isMuted: boolean;
+  onVolumeChange: (v: number) => void;
+}) {
+  const inputMode = useUIStore((s) => s.inputMode);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { ref, focused } = useFocusable({
+    onEnterPress: () => inputRef.current?.focus(),
+    onArrowPress: (direction) => {
+      if (direction === 'left') {
+        onVolumeChange(Math.max(0, (isMuted ? 0 : volume) - 0.1));
+        return false;
+      }
+      if (direction === 'right') {
+        onVolumeChange(Math.min(1, (isMuted ? 0 : volume) + 0.1));
+        return false;
+      }
+      return true;
+    },
+  });
+  const showFocus = focused && inputMode === 'keyboard';
+
+  return (
+    <div ref={ref} className={`flex items-center gap-1 px-1 py-0.5 rounded ${showFocus ? 'ring-2 ring-teal bg-teal/20' : ''}`}>
+      <input
+        ref={inputRef}
+        type="range"
+        min={0}
+        max={1}
+        step={0.05}
+        value={isMuted ? 0 : volume}
+        onChange={(e) => onVolumeChange(Number(e.target.value))}
+        className="w-20 h-1 accent-teal"
+      />
+    </div>
+  );
+}
+
 interface PlayerControlsProps {
   playerRef: React.RefObject<VideoPlayerHandle | null>;
   isPlaying: boolean;
@@ -74,7 +113,6 @@ export function PlayerControls({
   visible = true,
 }: PlayerControlsProps) {
   const [showQuality, setShowQuality] = useState(false);
-  const [showVolume, setShowVolume] = useState(false);
   const toggleMiniPlayer = usePlayerStore((s) => s.toggleMiniPlayer);
   const progressRef = useRef<HTMLDivElement>(null);
 
@@ -129,6 +167,34 @@ export function PlayerControls({
           )}
         </FocusableButton>
 
+        {/* Rewind -10s */}
+        {!isLive && duration > 0 && (
+          <FocusableButton
+            onClick={() => playerRef.current?.seek(Math.max(0, currentTime - 10))}
+            className="p-1.5 text-white/70 hover:text-white transition-colors"
+            title="Rewind 10s"
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12.5 3C7.81 3 4.01 6.54 3.57 11H1l3.5 4 3.5-4H5.59c.44-3.36 3.3-6 6.91-6 3.87 0 7 3.13 7 7s-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C7.82 20.04 10.05 21 12.5 21c4.97 0 9-4.03 9-9s-4.03-9-9-9z" />
+              <text x="10" y="15.5" fontSize="7.5" fontWeight="bold" textAnchor="middle" fill="currentColor">10</text>
+            </svg>
+          </FocusableButton>
+        )}
+
+        {/* Fast-forward +10s */}
+        {!isLive && duration > 0 && (
+          <FocusableButton
+            onClick={() => playerRef.current?.seek(Math.min(duration, currentTime + 10))}
+            className="p-1.5 text-white/70 hover:text-white transition-colors"
+            title="Forward 10s"
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M11.5 3c4.69 0 8.49 3.54 8.93 8H23l-3.5 4-3.5-4h2.02c-.44-3.36-3.3-6-6.91-6-3.87 0-7 3.13-7 7s3.13 7 7 7c1.93 0 3.68-.79 4.94-2.06l1.42 1.42C15.68 20.04 13.45 21 11.5 21c-4.97 0-9-4.03-9-9s4.03-9 9-9z" />
+              <text x="14" y="15.5" fontSize="7.5" fontWeight="bold" textAnchor="middle" fill="currentColor">10</text>
+            </svg>
+          </FocusableButton>
+        )}
+
         {/* Prev/Next */}
         {hasPrev && (
           <FocusableButton onClick={onPrev!} className="p-1.5 text-white/70 hover:text-white transition-colors" title="Previous">
@@ -146,31 +212,19 @@ export function PlayerControls({
         )}
 
         {/* Volume */}
-        <div className="relative flex items-center" onMouseEnter={() => setShowVolume(true)} onMouseLeave={() => setShowVolume(false)} onFocus={() => setShowVolume(true)} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setShowVolume(false); }}>
-          <FocusableButton onClick={onMuteToggle} className="p-1.5 text-white/70 hover:text-white transition-colors">
-            {isMuted || volume === 0 ? (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-              </svg>
-            ) : (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-              </svg>
-            )}
-          </FocusableButton>
-          {showVolume && (
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.05}
-              value={isMuted ? 0 : volume}
-              onChange={(e) => onVolumeChange(Number(e.target.value))}
-              className="w-20 h-1 accent-teal ml-1"
-            />
+        <FocusableButton onClick={onMuteToggle} className="p-1.5 text-white/70 hover:text-white transition-colors">
+          {isMuted || volume === 0 ? (
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+            </svg>
+          ) : (
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+            </svg>
           )}
-        </div>
+        </FocusableButton>
+        <FocusableVolumeSlider volume={volume} isMuted={isMuted} onVolumeChange={onVolumeChange} />
 
         {/* Time */}
         {!isLive && duration > 0 && (
