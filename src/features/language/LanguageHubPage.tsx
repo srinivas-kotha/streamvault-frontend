@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useParams, useNavigate, useSearch } from '@tanstack/react-router';
+import { useFocusable, FocusContext } from '@noriginmedia/norigin-spatial-navigation';
 import { PageTransition } from '@shared/components/PageTransition';
 import { HeroBanner, type HeroItem } from '@shared/components/HeroBanner';
 import { useLanguageMovieRails } from './api';
@@ -7,6 +8,7 @@ import { useSeriesByLanguage } from '@features/series/api';
 import { MoviesTabContent } from './components/MoviesTabContent';
 import { SeriesTabContent } from './components/SeriesTabContent';
 import { LiveTabContent } from './components/LiveTabContent';
+import { useUIStore } from '@lib/store';
 
 type TabKey = 'movies' | 'series' | 'live';
 
@@ -15,6 +17,37 @@ const tabs: { key: TabKey; label: string }[] = [
   { key: 'series', label: 'Series' },
   { key: 'live', label: 'Live TV' },
 ];
+
+function FocusableTab({ label, isActive, onSelect }: {
+  label: string;
+  isActive: boolean;
+  onSelect: () => void;
+}) {
+  const inputMode = useUIStore((s) => s.inputMode);
+  const { ref, focused } = useFocusable({ onEnterPress: onSelect });
+  const showFocus = focused && inputMode === 'keyboard';
+
+  return (
+    <button
+      ref={ref}
+      role="tab"
+      aria-selected={isActive}
+      onClick={onSelect}
+      className={`relative px-5 py-3 text-sm font-medium transition-all min-h-[48px] ${
+        isActive
+          ? 'text-text-primary'
+          : showFocus
+            ? 'text-text-primary bg-surface-raised/50 ring-2 ring-teal/50 rounded-t-lg'
+            : 'text-text-muted hover:text-text-secondary'
+      }`}
+    >
+      {label}
+      {isActive && (
+        <span className="absolute bottom-0 left-1 right-1 h-0.5 bg-gradient-to-r from-teal to-indigo rounded-full" />
+      )}
+    </button>
+  );
+}
 
 export function LanguageHubPage() {
   const { lang } = useParams({ strict: false }) as { lang?: string };
@@ -29,6 +62,12 @@ export function LanguageHubPage() {
       search: { tab: newTab === 'movies' ? undefined : newTab } as any,
     });
   };
+
+  const { ref: tabsRef, focusKey: tabsFocusKey } = useFocusable({
+    focusKey: 'language-tabs',
+    trackChildren: true,
+    saveLastFocusedChild: true,
+  });
 
   // Data for hero banner only
   const { rails: movieRails } = useLanguageMovieRails(language);
@@ -69,19 +108,6 @@ export function LanguageHubPage() {
     );
   }
 
-  // Keyboard tab switching
-  const handleTabKeyDown = (e: React.KeyboardEvent) => {
-    const currentIdx = tabs.findIndex((t) => t.key === activeTab);
-    if (e.key === 'ArrowRight') {
-      e.preventDefault();
-      const next = tabs[(currentIdx + 1) % tabs.length];
-      if (next) setActiveTab(next.key);
-    } else if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      const prev = tabs[(currentIdx - 1 + tabs.length) % tabs.length];
-      if (prev) setActiveTab(prev.key);
-    }
-  };
 
   return (
     <PageTransition>
@@ -91,30 +117,22 @@ export function LanguageHubPage() {
 
         {/* Content Tabs */}
         <div className="px-6 lg:px-10 relative z-10">
-          <div
-            className="flex items-center gap-1 border-b border-border-subtle"
-            onKeyDown={handleTabKeyDown}
-            role="tablist"
-          >
-            {tabs.map((t) => (
-              <button
-                key={t.key}
-                role="tab"
-                aria-selected={activeTab === t.key}
-                onClick={() => setActiveTab(t.key)}
-                className={`relative px-5 py-3 text-sm font-medium transition-all min-h-[48px] ${
-                  activeTab === t.key
-                    ? 'text-text-primary'
-                    : 'text-text-muted hover:text-text-secondary'
-                }`}
-              >
-                {t.label}
-                {activeTab === t.key && (
-                  <span className="absolute bottom-0 left-1 right-1 h-0.5 bg-gradient-to-r from-teal to-indigo rounded-full" />
-                )}
-              </button>
-            ))}
-          </div>
+          <FocusContext.Provider value={tabsFocusKey}>
+            <div
+              ref={tabsRef}
+              className="flex items-center gap-1 border-b border-border-subtle"
+              role="tablist"
+            >
+              {tabs.map((t) => (
+                <FocusableTab
+                  key={t.key}
+                  label={t.label}
+                  isActive={activeTab === t.key}
+                  onSelect={() => setActiveTab(t.key)}
+                />
+              ))}
+            </div>
+          </FocusContext.Provider>
         </div>
 
         {/* Tab Content */}

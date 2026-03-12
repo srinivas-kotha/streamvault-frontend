@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useVODCategories, useVODStreams } from '../api';
 import { SortFilterBar } from './SortFilterBar';
@@ -12,6 +12,35 @@ import { filterContent, DEFAULT_FILTERS, type FilterState } from '@shared/utils/
 import { collectAllGenres, parseGenres } from '@shared/utils/parseGenres';
 import { useDebounce } from '@shared/hooks/useDebounce';
 import { PageTransition } from '@shared/components/PageTransition';
+import { useFocusable } from '@noriginmedia/norigin-spatial-navigation';
+import { useUIStore } from '@lib/store';
+
+function FocusableSearchInput({ searchQuery, setSearchQuery }: {
+  searchQuery: string;
+  setSearchQuery: (q: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const inputMode = useUIStore((s) => s.inputMode);
+  const { ref: focusRef, focused } = useFocusable({
+    onEnterPress: () => inputRef.current?.focus(),
+  });
+  const showFocus = focused && inputMode === 'keyboard';
+
+  return (
+    <div ref={focusRef} className="flex items-center gap-4 mb-4">
+      <input
+        ref={inputRef}
+        type="text"
+        placeholder="Search movies..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        className={`w-full max-w-xs px-4 py-2 bg-surface-raised border rounded-lg text-text-primary placeholder:text-text-muted text-sm focus:outline-none focus:ring-2 focus:ring-teal/50 focus:border-teal-dim transition-all ${
+          showFocus ? 'border-teal ring-2 ring-teal/50' : 'border-border'
+        }`}
+      />
+    </div>
+  );
+}
 
 export function VODPage() {
   const navigate = useNavigate();
@@ -74,15 +103,7 @@ export function VODPage() {
       )}
 
       {/* Search + Sort/Filter */}
-      <div className="flex items-center gap-4 mb-4">
-        <input
-          type="text"
-          placeholder="Search movies..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full max-w-xs px-4 py-2 bg-surface-raised border border-border rounded-lg text-text-primary placeholder:text-text-muted text-sm focus:outline-none focus:ring-2 focus:ring-teal/50 focus:border-teal-dim transition-all"
-        />
-      </div>
+      <FocusableSearchInput searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
 
       <SortFilterBar
         sort={sort}
