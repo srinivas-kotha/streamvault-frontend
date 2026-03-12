@@ -209,6 +209,7 @@ export function SeriesTabContent({ language }: SeriesTabContentProps) {
                     navigate({
                       to: '/series/$seriesId',
                       params: { seriesId: String(item.series_id) },
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     } as any)
                   }
                 />
@@ -261,6 +262,7 @@ export function SeriesTabContent({ language }: SeriesTabContentProps) {
                     navigate({
                       to: '/series/$seriesId',
                       params: { seriesId: String(series.series_id) },
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     } as any)
                   }
                 />

@@ -18,7 +18,9 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: 'rating', label: 'Rating' },
 ];
 
-function sortMovies(items: XtreamVODStream[], sortKey: SortKey): XtreamVODStream[] {
+type MovieWithCategory = XtreamVODStream & { category_id: string; category_name: string };
+
+function sortMovies(items: MovieWithCategory[], sortKey: SortKey): MovieWithCategory[] {
   const sorted = [...items];
   switch (sortKey) {
     case 'name_asc':
@@ -46,7 +48,7 @@ interface MoviesTabContentProps {
 export function MoviesTabContent({ language, lang }: MoviesTabContentProps) {
   const navigate = useNavigate();
   const { rails: movieRails, isLoading: railsLoading } = useLanguageMovieRails(language);
-  const { allMovies, categories, isLoading: allLoading } = useLanguageAllMovies(language);
+  const { allMovies, isLoading: allLoading } = useLanguageAllMovies(language);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
