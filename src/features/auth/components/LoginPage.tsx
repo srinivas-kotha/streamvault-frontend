@@ -15,13 +15,15 @@ interface LoginForm {
   password: string;
 }
 
-function FocusableInput({ id, type = 'text', placeholder, autoComplete, error, register }: {
+function FocusableInput({ id, type = 'text', placeholder, autoComplete, error, register, enterKeyHint, onEnterKey }: {
   id: string;
   type?: string;
   placeholder: string;
   autoComplete: string;
   error?: string;
   register: ReturnType<typeof useForm<LoginForm>>['register'];
+  enterKeyHint?: 'next' | 'go' | 'done';
+  onEnterKey?: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const { ref: focusRef, focused } = useFocusable({
@@ -38,6 +40,7 @@ function FocusableInput({ id, type = 'text', placeholder, autoComplete, error, r
         id={id}
         type={type}
         autoComplete={autoComplete}
+        enterKeyHint={enterKeyHint}
         className={`w-full px-4 py-2.5 bg-surface-raised border rounded-lg text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-teal/50 focus:border-teal-dim transition-all ${focused ? 'border-teal ring-2 ring-teal/50' : 'border-border'}`}
         placeholder={placeholder}
         ref={(el) => {
@@ -48,6 +51,11 @@ function FocusableInput({ id, type = 'text', placeholder, autoComplete, error, r
           if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
             e.preventDefault();
             inputRef.current?.blur();
+          }
+          if (e.key === 'Enter' && onEnterKey) {
+            e.preventDefault();
+            inputRef.current?.blur();
+            onEnterKey();
           }
         }}
         {...registerRest}
@@ -139,6 +147,8 @@ export function LoginPage() {
                   autoComplete="username"
                   error={errors.username?.message}
                   register={register}
+                  enterKeyHint="next"
+                  onEnterKey={() => document.getElementById('password')?.focus()}
                 />
               </div>
 
@@ -153,6 +163,8 @@ export function LoginPage() {
                   autoComplete="current-password"
                   error={errors.password?.message}
                   register={register}
+                  enterKeyHint="go"
+                  onEnterKey={() => document.querySelector<HTMLButtonElement>('#login-submit')?.click()}
                 />
               </div>
 
