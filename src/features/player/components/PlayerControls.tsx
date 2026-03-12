@@ -73,6 +73,45 @@ function FocusableVolumeSlider({ volume, isMuted, onVolumeChange }: {
   );
 }
 
+function FocusableProgressBar({ progressRef, progress, currentTime, duration, onSeek, onSeekTo }: {
+  progressRef: React.RefObject<HTMLDivElement | null>;
+  progress: number;
+  currentTime: number;
+  duration: number;
+  onSeek: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onSeekTo: (time: number) => void;
+}) {
+  const inputMode = useUIStore((s) => s.inputMode);
+  const { ref, focused } = useFocusable({
+    onArrowPress: (direction) => {
+      if (direction === 'left') {
+        onSeekTo(Math.max(0, currentTime - 10));
+        return false;
+      }
+      if (direction === 'right') {
+        onSeekTo(Math.min(duration, currentTime + 10));
+        return false;
+      }
+      return true;
+    },
+  });
+  const showFocus = focused && inputMode === 'keyboard';
+
+  return (
+    <div ref={ref} className="px-4 mb-1">
+      <div
+        ref={progressRef}
+        onClick={onSeek}
+        className={`w-full h-1.5 bg-white/20 cursor-pointer group/progress hover:h-3 transition-all rounded-full ${showFocus ? 'h-3 ring-2 ring-teal/60' : ''}`}
+      >
+        <div className="h-full bg-teal rounded-full relative" style={{ width: `${progress}%` }}>
+          <div className={`absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-teal rounded-full transition-opacity ${showFocus ? 'opacity-100' : 'opacity-0 group-hover/progress:opacity-100'}`} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface PlayerControlsProps {
   playerRef: React.RefObject<VideoPlayerHandle | null>;
   isPlaying: boolean;
@@ -136,17 +175,14 @@ export function PlayerControls({
     >
       {/* Progress bar */}
       {!isLive && duration > 0 && (
-        <div className="px-4 mb-1">
-          <div
-            ref={progressRef}
-            onClick={handleSeek}
-            className="w-full h-1.5 bg-white/20 cursor-pointer group/progress hover:h-3 transition-all rounded-full"
-          >
-            <div className="h-full bg-teal rounded-full relative" style={{ width: `${progress}%` }}>
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-teal rounded-full opacity-0 group-hover/progress:opacity-100 transition-opacity" />
-            </div>
-          </div>
-        </div>
+        <FocusableProgressBar
+          progressRef={progressRef}
+          progress={progress}
+          currentTime={currentTime}
+          duration={duration}
+          onSeek={handleSeek}
+          onSeekTo={(t) => playerRef.current?.seek(t)}
+        />
       )}
 
       {/* Controls bar */}
