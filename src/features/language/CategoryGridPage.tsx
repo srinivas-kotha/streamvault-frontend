@@ -151,7 +151,8 @@ export function CategoryGridPage() {
           <Link
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             to={'/language/$lang' as any}
-            params={{ lang }}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            params={{ lang } as any}
             className="hover:text-text-primary transition-colors capitalize"
           >
             {language}
