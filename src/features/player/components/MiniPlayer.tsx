@@ -1,15 +1,16 @@
 import { usePlayerStore, useUIStore } from '@lib/store';
 import { PlayerPage } from './PlayerPage';
-import { useFocusable } from '@noriginmedia/norigin-spatial-navigation';
+import { useLRUD } from '@shared/hooks/useLRUD';
 
 function FocusableCloseButton({ onClick }: { onClick: () => void }) {
   const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, focused } = useFocusable({ onEnterPress: onClick });
-  const showFocus = focused && inputMode === 'keyboard';
+  const { ref, isFocused, focusProps } = useLRUD({ id: 'miniplayer-close', parent: 'root', onEnter: onClick });
+  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
     <button
       ref={ref}
+      {...focusProps}
       onClick={onClick}
       className={`absolute top-2 right-2 z-10 p-1 bg-obsidian/80 rounded-full text-text-muted hover:text-text-primary transition-colors ${showFocus ? 'ring-2 ring-teal text-text-primary' : ''}`}
     >

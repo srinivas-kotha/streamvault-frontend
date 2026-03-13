@@ -4,11 +4,14 @@
   "description": "Self-hosted streaming platform",
   "id": "/",
   "start_url": "/",
-  "display": "standalone",
+  "display": "fullscreen",
   "orientation": "any",
   "background_color": "#0A0A0F",
   "theme_color": "#0A0A0F",
-  "categories": ["entertainment", "video"],
+  "categories": [
+    "entertainment",
+    "video"
+  ],
   "icons": [
     {
       "src": "/icon-192.png",

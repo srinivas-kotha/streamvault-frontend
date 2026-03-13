@@ -2,30 +2,35 @@ import { useState, useRef, useCallback, useMemo } from 'react';
 import type { QualityLevel, VideoPlayerHandle } from './VideoPlayer';
 import { formatDuration } from '@shared/utils/formatDuration';
 import { useUIStore, usePlayerStore } from '@lib/store';
-import { useFocusable } from '@noriginmedia/norigin-spatial-navigation';
+import { useLRUD } from '@shared/hooks/useLRUD';
 
 function FocusableButton({
+  id,
   onClick,
   children,
   className = '',
   title,
 }: {
+  id: string;
   onClick: () => void;
   children: React.ReactNode;
   className?: string;
   title?: string;
 }) {
   const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, focused } = useFocusable({
-    onEnterPress: onClick,
+  const { ref, isFocused, focusProps } = useLRUD({
+    id,
+    parent: 'player-controls',
+    onEnter: onClick,
   });
 
   return (
     <button
       ref={ref}
+      {...focusProps}
       onClick={onClick}
       className={`${className} ${
-        focused && inputMode === 'keyboard' ? 'ring-2 ring-teal bg-teal/20 rounded-lg outline-none' : ''
+        isFocused && inputMode === 'keyboard' ? 'ring-2 ring-teal bg-teal/20 rounded-lg outline-none' : ''
       }`}
       title={title}
     >
@@ -41,24 +46,20 @@ function FocusableVolumeSlider({ volume, isMuted, onVolumeChange }: {
 }) {
   const inputMode = useUIStore((s) => s.inputMode);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { ref, focused } = useFocusable({
-    onEnterPress: () => inputRef.current?.focus(),
-    onArrowPress: (direction) => {
-      if (direction === 'left') {
-        onVolumeChange(Math.max(0, (isMuted ? 0 : volume) - 0.1));
-        return false;
-      }
-      if (direction === 'right') {
-        onVolumeChange(Math.min(1, (isMuted ? 0 : volume) + 0.1));
-        return false;
-      }
-      return true;
-    },
+  const { ref, isFocused, focusProps } = useLRUD({
+    id: 'player-volume-slider',
+    parent: 'player-controls',
+    onEnter: () => inputRef.current?.focus(),
   });
-  const showFocus = focused && inputMode === 'keyboard';
+  
+  // NOTE: Keydown handling for left/right adjustments when slider is focused
+  // is now handled via the global player keyboard shortcuts in usePlayerKeyboard
+  // since this node won't natively capture arrow events unless we hook into LRUD's event model deeply.
+
+  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
-    <div ref={ref} className={`flex items-center gap-1 px-1 py-0.5 rounded ${showFocus ? 'ring-2 ring-teal bg-teal/20' : ''}`}>
+    <div ref={ref} {...focusProps} className={`flex items-center gap-1 px-1 py-0.5 rounded ${showFocus ? 'ring-2 ring-teal bg-teal/20' : ''}`}>
       <input
         ref={inputRef}
         type="range"
@@ -73,32 +74,24 @@ function FocusableVolumeSlider({ volume, isMuted, onVolumeChange }: {
   );
 }
 
-function FocusableProgressBar({ progressRef, progress, currentTime, duration, onSeek, onSeekTo }: {
+function FocusableProgressBar({ progressRef, progress, onSeek }: {
   progressRef: React.RefObject<HTMLDivElement | null>;
   progress: number;
-  currentTime: number;
-  duration: number;
   onSeek: (e: React.MouseEvent<HTMLDivElement>) => void;
-  onSeekTo: (time: number) => void;
 }) {
   const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, focused } = useFocusable({
-    onArrowPress: (direction) => {
-      if (direction === 'left') {
-        onSeekTo(Math.max(0, currentTime - 10));
-        return false;
-      }
-      if (direction === 'right') {
-        onSeekTo(Math.min(duration, currentTime + 10));
-        return false;
-      }
-      return true;
-    },
+  const { ref, isFocused, focusProps } = useLRUD({
+    id: 'player-progress-bar',
+    parent: 'player-controls',
   });
-  const showFocus = focused && inputMode === 'keyboard';
+
+  // Note: D-pad left/right seek while focused on progress bar is typically
+  // handled globally via usePlayerKeyboard rather than at the element level in LRUD.
+  
+  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
-    <div ref={ref} className="px-4 mb-1">
+    <div ref={ref} {...focusProps} className="px-4 mb-1">
       <div
         ref={progressRef}
         onClick={onSeek}
@@ -179,10 +172,7 @@ export function PlayerControls({
         <FocusableProgressBar
           progressRef={progressRef}
           progress={progress}
-          currentTime={currentTime}
-          duration={duration}
           onSeek={handleSeek}
-          onSeekTo={(t) => playerRef.current?.seek(t)}
         />
       )}
 
@@ -190,6 +180,7 @@ export function PlayerControls({
       <div className="flex items-center gap-2 px-4 pb-4 pt-2">
         {/* Play/Pause */}
         <FocusableButton
+          id="player-play-pause"
           onClick={() => (isPlaying ? playerRef.current?.pause() : playerRef.current?.play())}
           className="p-2 text-white hover:text-teal transition-colors"
         >
@@ -207,6 +198,7 @@ export function PlayerControls({
         {/* Rewind -10s */}
         {!isLive && duration > 0 && (
           <FocusableButton
+            id="player-rewind"
             onClick={() => playerRef.current?.seek(Math.max(0, currentTime - 10))}
             className="p-1.5 text-white/70 hover:text-white transition-colors"
             title="Rewind 10s"
@@ -221,6 +213,7 @@ export function PlayerControls({
         {/* Fast-forward +10s */}
         {!isLive && duration > 0 && (
           <FocusableButton
+            id="player-forward"
             onClick={() => playerRef.current?.seek(Math.min(duration, currentTime + 10))}
             className="p-1.5 text-white/70 hover:text-white transition-colors"
             title="Forward 10s"
@@ -234,14 +227,14 @@ export function PlayerControls({
 
         {/* Prev/Next */}
         {hasPrev && (
-          <FocusableButton onClick={onPrev!} className="p-1.5 text-white/70 hover:text-white transition-colors" title="Previous">
+          <FocusableButton id="player-prev" onClick={onPrev!} className="p-1.5 text-white/70 hover:text-white transition-colors" title="Previous">
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
             </svg>
           </FocusableButton>
         )}
         {hasNext && (
-          <FocusableButton onClick={onNext!} className="p-1.5 text-white/70 hover:text-white transition-colors" title="Next">
+          <FocusableButton id="player-next" onClick={onNext!} className="p-1.5 text-white/70 hover:text-white transition-colors" title="Next">
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M16 18h2V6h-2zM4 18l8.5-6L4 6z" transform="scale(-1,1) translate(-24,0)" />
             </svg>
@@ -249,7 +242,7 @@ export function PlayerControls({
         )}
 
         {/* Volume */}
-        <FocusableButton onClick={onMuteToggle} className="p-1.5 text-white/70 hover:text-white transition-colors">
+        <FocusableButton id="player-mute" onClick={onMuteToggle} className="p-1.5 text-white/70 hover:text-white transition-colors">
           {isMuted || volume === 0 ? (
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
@@ -281,7 +274,7 @@ export function PlayerControls({
         {/* Quality */}
         {qualityLevels.length > 1 && (
           <div className="relative">
-            <FocusableButton onClick={() => setShowQuality(!showQuality)} className="p-1.5 text-white/70 hover:text-white transition-colors">
+            <FocusableButton id="player-quality-toggle" onClick={() => setShowQuality(!showQuality)} className="p-1.5 text-white/70 hover:text-white transition-colors">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -291,6 +284,7 @@ export function PlayerControls({
               <div className="absolute bottom-full right-0 mb-2 bg-surface border border-border rounded-lg overflow-hidden shadow-card min-w-[120px]">
                 {qualityLevels.map((level) => (
                   <FocusableButton
+                    id={`player-quality-${level.index}`}
                     key={level.index}
                     onClick={() => {
                       onQualityChange(level.index);
@@ -311,13 +305,13 @@ export function PlayerControls({
         {/* Mini-player + PiP — hidden in standalone/TV mode */}
         {!isStandalone && (
           <>
-            <FocusableButton onClick={toggleMiniPlayer} className="p-1.5 text-white/70 hover:text-white transition-colors" title="Mini player">
+            <FocusableButton id="player-mini" onClick={toggleMiniPlayer} className="p-1.5 text-white/70 hover:text-white transition-colors" title="Mini player">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <rect x="2" y="3" width="20" height="14" rx="2" />
                 <rect x="11" y="9" width="9" height="7" rx="1" />
               </svg>
             </FocusableButton>
-            <FocusableButton onClick={() => playerRef.current?.togglePiP()} className="p-1.5 text-white/70 hover:text-white transition-colors" title="Picture-in-Picture">
+            <FocusableButton id="player-pip" onClick={() => playerRef.current?.togglePiP()} className="p-1.5 text-white/70 hover:text-white transition-colors" title="Picture-in-Picture">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <rect x="2" y="3" width="20" height="14" rx="2" />
                 <rect x="11" y="9" width="9" height="7" rx="1" fill="currentColor" opacity="0.3" />
@@ -327,7 +321,7 @@ export function PlayerControls({
         )}
 
         {/* Fullscreen */}
-        <FocusableButton onClick={() => playerRef.current?.toggleFullscreen()} className="p-1.5 text-white/70 hover:text-white transition-colors" title="Fullscreen">
+        <FocusableButton id="player-fullscreen" onClick={() => playerRef.current?.toggleFullscreen()} className="p-1.5 text-white/70 hover:text-white transition-colors" title="Fullscreen">
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
           </svg>

@@ -1,8 +1,9 @@
 import { type ReactNode } from 'react';
-import { Link } from '@tanstack/react-router';
-import { useFocusable, FocusContext } from '@noriginmedia/norigin-spatial-navigation';
+import { Link, useNavigate } from '@tanstack/react-router';
+import { useLRUD } from '@shared/hooks/useLRUD';
 import { useUIStore } from '@lib/store';
 import { HorizontalScroll } from './HorizontalScroll';
+
 
 interface ContentRailProps {
   title: string;
@@ -15,18 +16,23 @@ interface ContentRailProps {
   focusKey?: string;
 }
 
-function FocusableSeeAll({ to }: { to: string }) {
+function FocusableSeeAll({ to, parentFocusKey }: { to: string; parentFocusKey: string }) {
   const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, focused } = useFocusable({
-    onEnterPress: () => {
-      // Programmatic navigation handled by Link click
-      ref.current?.querySelector('a')?.click();
+  const navigate = useNavigate();
+  
+  const { ref, isFocused, focusProps } = useLRUD({
+    id: `see-all-${parentFocusKey}`,
+    parent: parentFocusKey,
+    onEnter: () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      navigate({ to: to as any });
     },
   });
-  const showFocus = focused && inputMode === 'keyboard';
+  
+  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
-    <div ref={ref}>
+    <div ref={ref} {...focusProps}>
       <Link
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         to={to as any}
@@ -50,26 +56,27 @@ export function ContentRail({
   isLoading = false,
   focusKey: propFocusKey,
 }: ContentRailProps) {
-  const { ref, focusKey } = useFocusable({
-    focusKey: propFocusKey,
-    saveLastFocusedChild: true,
-    trackChildren: true,
+  const focusKeyId = propFocusKey || `rail-${title.replace(/\s+/g, '-').toLowerCase()}`;
+
+  const { ref } = useLRUD({
+    id: focusKeyId,
+    parent: 'root',
+    isFocusable: false, // Structural node that groups children
   });
 
   if (isEmpty && !isLoading) return null;
 
   return (
-    <FocusContext.Provider value={focusKey}>
-      <section ref={ref} className={`${className}`}>
-        {/* Header row */}
-        <div className="flex items-center justify-between mb-3 px-6 lg:px-10">
-          <h2 className="font-display text-lg lg:text-xl font-semibold text-text-primary">
-            {title}
-          </h2>
-          {seeAllTo && (
-            <FocusableSeeAll to={seeAllTo} />
-          )}
-        </div>
+    <section ref={ref} className={`${className}`}>
+      {/* Header row */}
+      <div className="flex items-center justify-between mb-3 px-6 lg:px-10">
+        <h2 className="font-display text-lg lg:text-xl font-semibold text-text-primary">
+          {title}
+        </h2>
+        {seeAllTo && (
+          <FocusableSeeAll to={seeAllTo} parentFocusKey={focusKeyId} />
+        )}
+      </div>
 
         {/* Content */}
         <div className="px-6 lg:px-10">
@@ -90,7 +97,6 @@ export function ContentRail({
           )}
         </div>
       </section>
-    </FocusContext.Provider>
   );
 }
 

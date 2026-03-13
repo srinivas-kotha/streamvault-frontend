@@ -12,7 +12,7 @@ import { filterContent, DEFAULT_FILTERS, type FilterState } from '@shared/utils/
 import { collectAllGenres, parseGenres } from '@shared/utils/parseGenres';
 import { useDebounce } from '@shared/hooks/useDebounce';
 import { PageTransition } from '@shared/components/PageTransition';
-import { useFocusable } from '@noriginmedia/norigin-spatial-navigation';
+import { useLRUD } from '@shared/hooks/useLRUD';
 import { useUIStore } from '@lib/store';
 
 function FocusableSearchInput({ searchQuery, setSearchQuery }: {
@@ -21,13 +21,15 @@ function FocusableSearchInput({ searchQuery, setSearchQuery }: {
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const inputMode = useUIStore((s) => s.inputMode);
-  const { ref: focusRef, focused } = useFocusable({
-    onEnterPress: () => inputRef.current?.focus(),
+  const { ref: focusRef, isFocused, focusProps } = useLRUD({
+    id: 'vod-search-input',
+    parent: 'root',
+    onEnter: () => inputRef.current?.focus(),
   });
-  const showFocus = focused && inputMode === 'keyboard';
+  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
-    <div ref={focusRef} className="flex items-center gap-4 mb-4">
+    <div ref={focusRef} {...focusProps} className="flex items-center gap-4 mb-4">
       <input
         ref={inputRef}
         type="text"

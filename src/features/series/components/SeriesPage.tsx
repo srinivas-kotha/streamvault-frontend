@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useFocusable, FocusContext } from '@noriginmedia/norigin-spatial-navigation';
+import { useLRUD } from '@shared/hooks/useLRUD';
 import { useSeriesByLanguage, getSupportedLanguages, type SeriesWithChannel } from '../api';
 import { ContentCard } from '@shared/components/ContentCard';
 import { SkeletonGrid } from '@shared/components/Skeleton';
@@ -19,19 +19,22 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: 'rating', label: 'Rating' },
 ];
 
-function FocusableButton({ label, isActive, onSelect, className = '' }: {
+function FocusableButton({ id, parent, label, isActive, onSelect, className = '' }: {
+  id: string;
+  parent: string;
   label: string;
   isActive: boolean;
   onSelect: () => void;
   className?: string;
 }) {
   const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, focused } = useFocusable({ onEnterPress: onSelect });
-  const showFocus = focused && inputMode === 'keyboard';
+  const { ref, isFocused, focusProps } = useLRUD({ id, parent, onEnter: onSelect });
+  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
     <button
       ref={ref}
+      {...focusProps}
       onClick={onSelect}
       className={`${className} ${showFocus && !isActive ? 'ring-2 ring-teal/50' : ''}`}
     >
@@ -70,24 +73,6 @@ export function SeriesPage() {
   const debouncedSearch = useDebounce(searchQuery, 300);
 
   const { allSeries, channels, isLoading } = useSeriesByLanguage(activeLanguage);
-
-  const { ref: langRef, focusKey: langFocusKey } = useFocusable({
-    focusKey: 'series-lang-tabs',
-    trackChildren: true,
-    saveLastFocusedChild: true,
-  });
-
-  const { ref: channelRef, focusKey: channelFocusKey } = useFocusable({
-    focusKey: 'series-channels',
-    trackChildren: true,
-    saveLastFocusedChild: true,
-  });
-
-  const { ref: sortRef, focusKey: sortFocusKey } = useFocusable({
-    focusKey: 'series-sort',
-    trackChildren: true,
-    saveLastFocusedChild: true,
-  });
 
   // Filter and sort
   const processedSeries = useMemo(() => {
@@ -130,63 +115,67 @@ export function SeriesPage() {
         </div>
 
         {/* Language Tabs */}
-        <FocusContext.Provider value={langFocusKey}>
-          <div ref={langRef} className="flex gap-2 mb-5">
-            {languages.map((lang) => (
-              <FocusableButton
-                key={lang}
-                label={lang}
-                isActive={activeLanguage === lang}
-                onSelect={() => handleLanguageChange(lang)}
-                className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all min-h-[44px] ${
-                  activeLanguage === lang
-                    ? 'bg-gradient-to-r from-teal/20 to-indigo/20 text-text-primary border border-teal/30'
-                    : 'bg-surface-raised text-text-secondary border border-border hover:text-text-primary hover:border-teal/20'
-                }`}
-              />
-            ))}
+        <div className="flex gap-2 mb-5">
+          {languages.map((lang) => (
             <FocusableButton
-              label="All"
-              isActive={activeLanguage === 'all'}
-              onSelect={() => handleLanguageChange('all')}
+              id={`series-lang-${lang}`}
+              parent="root"
+              key={lang}
+              label={lang}
+              isActive={activeLanguage === lang}
+              onSelect={() => handleLanguageChange(lang)}
               className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all min-h-[44px] ${
-                activeLanguage === 'all'
+                activeLanguage === lang
                   ? 'bg-gradient-to-r from-teal/20 to-indigo/20 text-text-primary border border-teal/30'
                   : 'bg-surface-raised text-text-secondary border border-border hover:text-text-primary hover:border-teal/20'
               }`}
             />
-          </div>
-        </FocusContext.Provider>
+          ))}
+          <FocusableButton
+            id="series-lang-all"
+            parent="root"
+            label="All"
+            isActive={activeLanguage === 'all'}
+            onSelect={() => handleLanguageChange('all')}
+            className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all min-h-[44px] ${
+              activeLanguage === 'all'
+                ? 'bg-gradient-to-r from-teal/20 to-indigo/20 text-text-primary border border-teal/30'
+                : 'bg-surface-raised text-text-secondary border border-border hover:text-text-primary hover:border-teal/20'
+            }`}
+          />
+        </div>
 
         {/* Channel Filter Pills */}
         {channels.length > 1 && (
-          <FocusContext.Provider value={channelFocusKey}>
-            <div ref={channelRef} className="flex gap-2 mb-5 overflow-x-auto scrollbar-hide pb-1">
+          <div className="flex gap-2 mb-5 overflow-x-auto scrollbar-hide pb-1">
+            <FocusableButton
+              id="series-channel-all"
+              parent="root"
+              label={`All (${totalCount})`}
+              isActive={activeChannel === null}
+              onSelect={() => setActiveChannel(null)}
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-medium transition-all min-h-[36px] ${
+                activeChannel === null
+                  ? 'bg-teal/15 text-teal border border-teal/30'
+                  : 'bg-surface-raised text-text-muted border border-border-subtle hover:text-text-secondary hover:border-border'
+              }`}
+            />
+            {channels.map((ch) => (
               <FocusableButton
-                label={`All (${totalCount})`}
-                isActive={activeChannel === null}
-                onSelect={() => setActiveChannel(null)}
-                className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-medium transition-all min-h-[36px] ${
-                  activeChannel === null
+                id={`series-channel-${ch.id}`}
+                parent="root"
+                key={ch.id}
+                label={`${ch.name} (${ch.count})`}
+                isActive={activeChannel === ch.id}
+                onSelect={() => setActiveChannel(ch.id === activeChannel ? null : ch.id)}
+                className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-medium transition-all min-h-[36px] whitespace-nowrap ${
+                  activeChannel === ch.id
                     ? 'bg-teal/15 text-teal border border-teal/30'
                     : 'bg-surface-raised text-text-muted border border-border-subtle hover:text-text-secondary hover:border-border'
                 }`}
               />
-              {channels.map((ch) => (
-                <FocusableButton
-                  key={ch.id}
-                  label={`${ch.name} (${ch.count})`}
-                  isActive={activeChannel === ch.id}
-                  onSelect={() => setActiveChannel(ch.id === activeChannel ? null : ch.id)}
-                  className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-medium transition-all min-h-[36px] whitespace-nowrap ${
-                    activeChannel === ch.id
-                      ? 'bg-teal/15 text-teal border border-teal/30'
-                      : 'bg-surface-raised text-text-muted border border-border-subtle hover:text-text-secondary hover:border-border'
-                  }`}
-                />
-              ))}
-            </div>
-          </FocusContext.Provider>
+            ))}
+          </div>
         )}
 
         {/* Search + Sort Row */}
@@ -220,23 +209,23 @@ export function SeriesPage() {
             )}
           </div>
 
-          <FocusContext.Provider value={sortFocusKey}>
-            <div ref={sortRef} className="flex gap-1.5">
-              {SORT_OPTIONS.map((opt) => (
-                <FocusableButton
-                  key={opt.key}
-                  label={opt.label}
-                  isActive={sortKey === opt.key}
-                  onSelect={() => setSortKey(opt.key)}
-                  className={`px-3 py-2 rounded-lg text-xs font-medium transition-all min-h-[36px] ${
-                    sortKey === opt.key
-                      ? 'bg-teal/15 text-teal'
-                      : 'text-text-muted hover:text-text-secondary'
-                  }`}
-                />
-              ))}
-            </div>
-          </FocusContext.Provider>
+          <div className="flex gap-1.5">
+            {SORT_OPTIONS.map((opt) => (
+              <FocusableButton
+                id={`series-sort-${opt.key}`}
+                parent="root"
+                key={opt.key}
+                label={opt.label}
+                isActive={sortKey === opt.key}
+                onSelect={() => setSortKey(opt.key)}
+                className={`px-3 py-2 rounded-lg text-xs font-medium transition-all min-h-[36px] ${
+                  sortKey === opt.key
+                    ? 'bg-teal/15 text-teal'
+                    : 'text-text-muted hover:text-text-secondary'
+                }`}
+              />
+            ))}
+          </div>
         </div>
 
         {/* Content */}

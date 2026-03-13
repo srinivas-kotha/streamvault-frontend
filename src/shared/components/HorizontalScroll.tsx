@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useUIStore } from '@lib/store';
-import { useFocusable } from '@noriginmedia/norigin-spatial-navigation';
+import { useLRUD } from '@shared/hooks/useLRUD';
 
 function FocusableScrollArrow({ direction, onClick, arrowOpacity }: {
   direction: 'left' | 'right';
@@ -8,12 +8,17 @@ function FocusableScrollArrow({ direction, onClick, arrowOpacity }: {
   arrowOpacity: string;
 }) {
   const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, focused } = useFocusable({ onEnterPress: onClick });
-  const showFocus = focused && inputMode === 'keyboard';
+  const { ref, isFocused, focusProps } = useLRUD({
+    id: `scroll-arrow-${direction}`,
+    parent: 'root',
+    onEnter: onClick,
+  });
+  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
     <button
       ref={ref}
+      {...focusProps}
       onClick={onClick}
       className={`absolute ${direction === 'left' ? 'left-0' : 'right-0'} top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-obsidian/80 border border-border-subtle text-text-primary transition-opacity duration-200 hover:bg-surface-raised hover:border-teal/30 ${showFocus ? 'opacity-100 ring-2 ring-teal' : arrowOpacity}`}
       aria-label={`Scroll ${direction}`}

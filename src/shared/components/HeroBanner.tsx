@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useFocusable, FocusContext } from '@noriginmedia/norigin-spatial-navigation';
+import { useLRUD } from '@shared/hooks/useLRUD';
 import { usePlayerStore, useUIStore } from '@lib/store';
 
 export interface HeroItem {
@@ -23,14 +23,16 @@ function HeroButton({
   onClick,
   children,
   variant = 'primary',
+  id,
 }: {
   onClick: () => void;
   children: React.ReactNode;
   variant?: 'primary' | 'secondary';
+  id: string;
 }) {
   const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, focused } = useFocusable({ onEnterPress: onClick });
-  const showFocus = focused && inputMode === 'keyboard';
+  const { ref, isFocused, focusProps } = useLRUD({ id, parent: 'hero-banner', onEnter: onClick });
+  const showFocus = isFocused && inputMode === 'keyboard';
 
   const base = variant === 'primary'
     ? 'bg-teal text-obsidian font-semibold hover:bg-teal/90'
@@ -39,6 +41,7 @@ function HeroButton({
   return (
     <button
       ref={ref}
+      {...focusProps}
       onClick={onClick}
       className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all min-h-[48px] text-sm lg:text-base ${base} ${
         showFocus ? 'ring-2 ring-teal ring-offset-2 ring-offset-obsidian scale-105' : ''
@@ -57,10 +60,11 @@ export function HeroBanner({ items, autoRotateMs = 8000 }: HeroBannerProps) {
   const safeItems = useMemo(() => items.slice(0, 5), [items]);
   const current = safeItems[activeIndex];
 
-  const { ref: heroRef, focusKey } = useFocusable({
-    focusKey: 'hero-banner',
-    trackChildren: true,
-    saveLastFocusedChild: true,
+  const { ref: heroRef } = useLRUD({
+    id: 'hero-banner',
+    parent: 'root',
+    isFocusable: false,
+    orientation: 'horizontal',
   });
 
   // Auto-rotate (pause when hero is focused)
@@ -95,8 +99,7 @@ export function HeroBanner({ items, autoRotateMs = 8000 }: HeroBannerProps) {
   if (!current) return null;
 
   return (
-    <FocusContext.Provider value={focusKey}>
-      <div ref={heroRef} className="relative w-full -mt-16" style={{ height: 'clamp(300px, 60vh, 600px)' }}>
+    <div ref={heroRef} className="relative w-full -mt-16" style={{ height: 'clamp(300px, 60vh, 600px)' }}>
         {/* Backdrop image */}
         <div className="absolute inset-0 overflow-hidden">
           <img
@@ -147,14 +150,14 @@ export function HeroBanner({ items, autoRotateMs = 8000 }: HeroBannerProps) {
 
             {/* Action buttons — focusable for TV remote */}
             <div className="flex items-center gap-3">
-              <HeroButton onClick={handlePlay} variant="primary">
+              <HeroButton id={`hero-play-${current.id}`} onClick={handlePlay} variant="primary">
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M8 5v14l11-7z" />
                 </svg>
                 Play
               </HeroButton>
               {current.type !== 'live' && (
-                <HeroButton onClick={handleMoreInfo} variant="secondary">
+                <HeroButton id={`hero-info-${current.id}`} onClick={handleMoreInfo} variant="secondary">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -183,6 +186,5 @@ export function HeroBanner({ items, autoRotateMs = 8000 }: HeroBannerProps) {
           )}
         </div>
       </div>
-    </FocusContext.Provider>
   );
 }

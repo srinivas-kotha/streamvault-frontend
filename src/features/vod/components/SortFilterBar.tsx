@@ -1,6 +1,6 @@
 import { type SortOption, SORT_OPTIONS } from '@shared/utils/sortContent';
 import type { FilterState } from '@shared/utils/filterContent';
-import { useFocusable, FocusContext } from '@noriginmedia/norigin-spatial-navigation';
+import { useLRUD } from '@shared/hooks/useLRUD';
 import { useUIStore } from '@lib/store';
 
 interface SortFilterBarProps {
@@ -11,7 +11,9 @@ interface SortFilterBarProps {
   genres: string[];
 }
 
-function FocusableChip({ label, isActive, onSelect, activeClass, inactiveClass }: {
+function FocusableChip({ id, parent, label, isActive, onSelect, activeClass, inactiveClass }: {
+  id: string;
+  parent: string;
   label: string;
   isActive: boolean;
   onSelect: () => void;
@@ -19,12 +21,13 @@ function FocusableChip({ label, isActive, onSelect, activeClass, inactiveClass }
   inactiveClass: string;
 }) {
   const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, focused } = useFocusable({ onEnterPress: onSelect });
-  const showFocus = focused && inputMode === 'keyboard';
+  const { ref, isFocused, focusProps } = useLRUD({ id, parent, onEnter: onSelect });
+  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
     <button
       ref={ref}
+      {...focusProps}
       onClick={onSelect}
       className={isActive ? activeClass : showFocus ? `${inactiveClass} ring-2 ring-teal/50` : inactiveClass}
     >
@@ -34,17 +37,6 @@ function FocusableChip({ label, isActive, onSelect, activeClass, inactiveClass }
 }
 
 export function SortFilterBar({ sort, onSortChange, filters, onFiltersChange, genres }: SortFilterBarProps) {
-  const { ref: ratingRef, focusKey: ratingFocusKey } = useFocusable({
-    focusKey: 'vod-rating-filter',
-    trackChildren: true,
-    saveLastFocusedChild: true,
-  });
-
-  const { ref: genreRef, focusKey: genreFocusKey } = useFocusable({
-    focusKey: 'vod-genre-filter',
-    trackChildren: true,
-    saveLastFocusedChild: true,
-  });
 
   return (
     <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -65,44 +57,46 @@ export function SortFilterBar({ sort, onSortChange, filters, onFiltersChange, ge
       </select>
 
       {/* Rating filter */}
-      <FocusContext.Provider value={ratingFocusKey}>
-        <div ref={ratingRef} className="flex gap-1">
-          {[null, 3.5, 4].map((r) => (
-            <FocusableChip
-              key={r ?? 'all'}
-              label={`${r === null ? 'Any' : `${r}+`} ★`}
-              isActive={filters.minRating === r}
-              onSelect={() => onFiltersChange({ ...filters, minRating: r })}
-              activeClass="px-2.5 py-1 rounded-md text-xs font-medium transition-all bg-warning/15 text-warning border border-warning/30"
-              inactiveClass="px-2.5 py-1 rounded-md text-xs font-medium transition-all bg-surface-raised text-text-muted border border-border hover:text-text-secondary"
-            />
-          ))}
-        </div>
-      </FocusContext.Provider>
+      <div className="flex gap-1">
+        {[null, 3.5, 4].map((r) => (
+          <FocusableChip
+            id={`vod-rating-${r ?? 'none'}`}
+            parent="root"
+            key={r ?? 'all'}
+            label={`${r === null ? 'Any' : `${r}+`} ★`}
+            isActive={filters.minRating === r}
+            onSelect={() => onFiltersChange({ ...filters, minRating: r })}
+            activeClass="px-2.5 py-1 rounded-md text-xs font-medium transition-all bg-warning/15 text-warning border border-warning/30"
+            inactiveClass="px-2.5 py-1 rounded-md text-xs font-medium transition-all bg-surface-raised text-text-muted border border-border hover:text-text-secondary"
+          />
+        ))}
+      </div>
 
       {/* Genre chips */}
       {genres.length > 0 && (
-        <FocusContext.Provider value={genreFocusKey}>
-          <div ref={genreRef} className="flex gap-1.5 overflow-x-auto pb-1 max-w-[50%]">
+        <div className="flex gap-1.5 overflow-x-auto pb-1 max-w-[50%]">
+          <FocusableChip
+            id="vod-genre-all"
+            parent="root"
+            label="All Genres"
+            isActive={!filters.genre}
+            onSelect={() => onFiltersChange({ ...filters, genre: null })}
+            activeClass="px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all bg-teal/15 text-teal border border-teal/30"
+            inactiveClass="px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all bg-surface-raised text-text-muted border border-border hover:text-text-secondary"
+          />
+          {genres.slice(0, 15).map((g) => (
             <FocusableChip
-              label="All Genres"
-              isActive={!filters.genre}
-              onSelect={() => onFiltersChange({ ...filters, genre: null })}
+              id={`vod-genre-${g}`}
+              parent="root"
+              key={g}
+              label={g}
+              isActive={filters.genre === g}
+              onSelect={() => onFiltersChange({ ...filters, genre: filters.genre === g ? null : g })}
               activeClass="px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all bg-teal/15 text-teal border border-teal/30"
               inactiveClass="px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all bg-surface-raised text-text-muted border border-border hover:text-text-secondary"
             />
-            {genres.slice(0, 15).map((g) => (
-              <FocusableChip
-                key={g}
-                label={g}
-                isActive={filters.genre === g}
-                onSelect={() => onFiltersChange({ ...filters, genre: filters.genre === g ? null : g })}
-                activeClass="px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all bg-teal/15 text-teal border border-teal/30"
-                inactiveClass="px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all bg-surface-raised text-text-muted border border-border hover:text-text-secondary"
-              />
-            ))}
-          </div>
-        </FocusContext.Provider>
+          ))}
+        </div>
       )}
     </div>
   );

@@ -5,7 +5,7 @@ import { PlayerControls } from './PlayerControls';
 import { usePlayerKeyboard } from '../hooks/usePlayerKeyboard';
 import { useProgressTracking } from '../hooks/useProgressTracking';
 import { usePlayerStore } from '@lib/store';
-import { FocusContext, useFocusable } from '@noriginmedia/norigin-spatial-navigation';
+import { useLRUD } from '@shared/hooks/useLRUD';
 
 interface PlayerPageProps {
   streamType: string;
@@ -87,14 +87,16 @@ export function PlayerPage({
   }, [isPlaying, showControls]);
 
   // Spatial Navigation wrapper
-  const { ref, focusKey, hasFocusedChild } = useFocusable({
-    focusKey: 'player',
+  const { ref, isFocused } = useLRUD({
+    id: `player-${streamId}`,
+    parent: 'root',
+    isFocusable: false,
   });
 
   // Keep controls visible if user is navigating controls with D-pad
   useEffect(() => {
-    if (hasFocusedChild) showControls();
-  }, [hasFocusedChild, showControls]);
+    if (isFocused) showControls();
+  }, [isFocused, showControls]);
 
   usePlayerKeyboard({
     playerRef,
@@ -148,14 +150,13 @@ export function PlayerPage({
   }
 
   return (
-    <FocusContext.Provider value={focusKey}>
-      <div 
-        ref={ref}
-        className="relative aspect-video bg-black rounded-xl overflow-hidden focus:outline-none"
-        onMouseMove={showControls}
-        onMouseLeave={() => isPlaying && setControlsVisible(false)}
-      >
-        <VideoPlayer
+    <div 
+      ref={ref}
+      className="relative aspect-video bg-black rounded-xl overflow-hidden focus:outline-none"
+      onMouseMove={showControls}
+      onMouseLeave={() => isPlaying && setControlsVisible(false)}
+    >
+      <VideoPlayer
         ref={playerRef}
         url={streamData.url}
         isLive={streamData.isLive}
@@ -191,7 +192,6 @@ export function PlayerPage({
           {streamName}
         </div>
       )}
-      </div>
-    </FocusContext.Provider>
+    </div>
   );
 }
