@@ -34,18 +34,21 @@ export function LRUDProvider({ children }: LRUDProviderProps) {
       rootRegistered.current = true;
     }
 
-    // Handle keydown events to drive LRUD
+    // Handle keydown events to drive LRUD.
+    // Use capture phase so we intercept before any child element can swallow the event.
     function handleKeyDown(e: KeyboardEvent) {
-      // Don't intercept keys when user is typing in an input
+      // Don't intercept keys when user is typing in an input — EXCEPT arrow
+      // keys which should escape the input and navigate via LRUD
       const tag = (document.activeElement as HTMLElement)?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      const isInInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+      const isArrow = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+                        'Up', 'Down', 'Left', 'Right'].includes(e.key);
 
-      const isNavKey = [
-        'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
-        'Up', 'Down', 'Left', 'Right',
-        'Enter', 'Escape', 'Backspace'
-      ].includes(e.key);
-      
+      // Let non-arrow keys through to inputs normally
+      if (isInInput && !isArrow) return;
+
+      const isNavKey = isArrow || ['Enter', 'Escape', 'Backspace'].includes(e.key);
+
       if (isNavKey) {
         setInputMode('keyboard');
 
@@ -54,6 +57,11 @@ export function LRUDProvider({ children }: LRUDProviderProps) {
         if (!lrud.currentFocusNode) {
           try { lrud.assignFocus('root'); } catch { /* no focusable nodes yet */ }
         }
+      }
+
+      // If in an input and arrow pressed, blur the input first so LRUD takes over
+      if (isInInput && isArrow) {
+        (document.activeElement as HTMLElement)?.blur();
       }
 
       // Map keys to LRUD directions
@@ -89,11 +97,12 @@ export function LRUDProvider({ children }: LRUDProviderProps) {
       setInputMode('mouse');
     }
 
-    window.addEventListener('keydown', handleKeyDown);
+    // Use capture: true to intercept before child elements can swallow events
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keydown', handleKeyDown, { capture: true });
       window.removeEventListener('mousemove', handleMouseMove);
     };
   }, [setInputMode]);

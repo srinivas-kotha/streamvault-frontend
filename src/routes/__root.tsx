@@ -20,6 +20,16 @@ function FullscreenPlayer() {
 
   return (
     <div className="fixed inset-0 z-50 bg-black">
+      {/* Close button — always visible */}
+      <button
+        onClick={stop}
+        className="absolute top-4 right-4 z-[60] p-2 bg-obsidian/70 rounded-full text-white/80 hover:text-white hover:bg-obsidian/90 transition-colors"
+        aria-label="Close player"
+      >
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
       <PlayerPage
         streamType={currentStreamType}
         streamId={currentStreamId}
