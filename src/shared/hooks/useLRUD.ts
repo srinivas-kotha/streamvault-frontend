@@ -29,6 +29,9 @@ export function useLRUD({ id, onEnter, onFocus, onBlur, parent = 'root', ...conf
   onBlurRef.current = onBlur;
 
   useEffect(() => {
+    // Unregister first in case the node already exists (e.g. HMR, re-mount)
+    try { lrud.unregisterNode(id); } catch { /* not registered yet */ }
+
     // Register the node in the LRUD tree with parent
     lrud.registerNode(id, {
       parent,
