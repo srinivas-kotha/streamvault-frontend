@@ -130,9 +130,8 @@ class MainActivity : Activity() {
 
             if (eventType != null) {
                 // Inject a synthetic KeyboardEvent directly into JavaScript.
-                // Dispatch on both document and window to ensure capture-phase
-                // listeners on either target receive the event.
-                // Also show a debug toast on screen (remove after confirming it works).
+                // Only dispatch on document (not both document AND window)
+                // to avoid double-firing the LRUD handler.
                 val js = """
                     (function() {
                         var e = new KeyboardEvent('$eventType', {
@@ -144,21 +143,25 @@ class MainActivity : Activity() {
                             cancelable: true
                         });
                         document.dispatchEvent(e);
-                        window.dispatchEvent(e);
 
-                        // Debug overlay — shows key events on screen
+                        // Debug overlay — shows key + LRUD state
                         if ('$eventType' === 'keydown') {
                             var d = document.getElementById('sv-debug');
                             if (!d) {
                                 d = document.createElement('div');
                                 d.id = 'sv-debug';
-                                d.style.cssText = 'position:fixed;top:10px;right:10px;z-index:99999;background:rgba(0,0,0,0.8);color:#0ff;padding:8px 16px;border-radius:8px;font-size:16px;font-family:monospace;pointer-events:none;transition:opacity 0.3s;';
+                                d.style.cssText = 'position:fixed;top:10px;left:10px;right:10px;z-index:99999;background:rgba(0,0,0,0.9);color:#0ff;padding:12px 16px;border-radius:8px;font-size:14px;font-family:monospace;pointer-events:none;white-space:pre-wrap;line-height:1.4;';
                                 document.body.appendChild(d);
                             }
-                            d.textContent = 'KEY: $key ($keyCode)';
+                            var lrud = window.__LRUD_INSTANCE__;
+                            var focusNode = lrud ? (lrud.currentFocusNode ? lrud.currentFocusNode.id : 'NONE') : 'NO LRUD';
+                            var nodeCount = 0;
+                            if (lrud && lrud.nodes) { try { nodeCount = Object.keys(lrud.nodes).length; } catch(x) {} }
+                            if (lrud && lrud.tree) { try { var c = function(n) { var s = 1; if (n.children) { for (var k in n.children) s += c(n.children[k]); } return s; }; nodeCount = c(lrud.tree) - 1; } catch(x) {} }
+                            d.textContent = 'KEY: $key | Focus: ' + focusNode + ' | Nodes: ' + nodeCount;
                             d.style.opacity = '1';
                             clearTimeout(window._svDebugTimer);
-                            window._svDebugTimer = setTimeout(function() { d.style.opacity = '0.3'; }, 1500);
+                            window._svDebugTimer = setTimeout(function() { d.style.opacity = '0.4'; }, 2000);
                         }
                     })();
                 """.trimIndent()
