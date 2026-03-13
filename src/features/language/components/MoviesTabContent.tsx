@@ -167,10 +167,10 @@ export function MoviesTabContent({ language, lang }: MoviesTabContentProps) {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [sortKey, setSortKey] = useState<SortKey>('name_asc');
+  const [sortKey, setSortKey] = useState<SortKey>('recent');
   const debouncedSearch = useDebounce(searchQuery, 300);
 
-  const hasActiveFilters = !!debouncedSearch || activeCategory !== null || sortKey !== 'name_asc';
+  const hasActiveFilters = !!debouncedSearch || activeCategory !== null || sortKey !== 'recent';
 
   // Category chips from rails data
   const categoryChips = useMemo(
@@ -209,7 +209,7 @@ export function MoviesTabContent({ language, lang }: MoviesTabContentProps) {
   const clearFilters = () => {
     setSearchQuery('');
     setActiveCategory(null);
-    setSortKey('name_asc');
+    setSortKey('recent');
   };
 
   return (

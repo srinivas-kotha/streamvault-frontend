@@ -14,6 +14,38 @@ const tabs: { key: TabKey; label: string }[] = [
   { key: 'live', label: 'Live TV' },
 ];
 
+const LANGUAGE_TABS = [
+  { key: 'telugu', label: 'Telugu' },
+  { key: 'hindi', label: 'Hindi' },
+  { key: 'english', label: 'English' },
+];
+
+function FocusableLanguageTab({ id, label, isActive, onSelect }: {
+  id: string;
+  label: string;
+  isActive: boolean;
+  onSelect: () => void;
+}) {
+  const { ref, showFocusRing, focusProps } = useSpatialFocusable({ focusKey: id, onEnterPress: onSelect });
+
+  return (
+    <button
+      ref={ref}
+      {...focusProps}
+      onClick={onSelect}
+      className={`relative px-5 py-2.5 text-sm font-semibold transition-all min-h-[44px] rounded-lg ${
+        isActive
+          ? 'text-teal bg-teal/10 border border-teal/30'
+          : showFocusRing
+            ? 'text-text-primary bg-surface-raised/50 ring-2 ring-teal/50'
+            : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised/30'
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
 function FocusableTab({ id, label, isActive, onSelect }: {
   id: string;
   label: string;
@@ -49,7 +81,7 @@ export function LanguageHubPage() {
   const { lang } = useParams({ strict: false }) as { lang?: string };
   const language = lang ? lang.charAt(0).toUpperCase() + lang.slice(1) : '';
   const navigate = useNavigate();
-  usePageFocus('langhub-tab-movies');
+  usePageFocus(`langhub-lang-${lang || 'telugu'}`);
   const { ref: containerRef, focusKey } = useSpatialContainer({ focusKey: 'LANGUAGE_HUB_PAGE', focusable: false });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { tab } = useSearch({ from: '/_authenticated/language/$lang' as any });
@@ -76,6 +108,28 @@ export function LanguageHubPage() {
     <PageTransition>
       <FocusContext.Provider value={focusKey}>
       <div ref={containerRef} className="space-y-4 pb-12">
+        {/* Language Tabs */}
+        <div className="px-6 lg:px-10 pt-2">
+          <div className="flex items-center gap-2">
+            {LANGUAGE_TABS.map((lt) => (
+              <FocusableLanguageTab
+                key={lt.key}
+                id={`langhub-lang-${lt.key}`}
+                label={lt.label}
+                isActive={lang === lt.key}
+                onSelect={() => {
+                  navigate({
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    to: `/language/${lt.key}` as any,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    search: activeTab === 'movies' ? undefined : { tab: activeTab } as any,
+                  });
+                }}
+              />
+            ))}
+          </div>
+        </div>
+
         {/* Content Tabs */}
         <div className="px-6 lg:px-10 relative z-10">
           <div
