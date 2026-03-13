@@ -8,16 +8,16 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  isAuthenticated: sessionStorage.getItem('sv_auth') === '1',
-  username: sessionStorage.getItem('sv_user'),
+  isAuthenticated: localStorage.getItem('sv_auth') === '1',
+  username: localStorage.getItem('sv_user'),
   setAuth: (username) => {
-    sessionStorage.setItem('sv_auth', '1');
-    sessionStorage.setItem('sv_user', username);
+    localStorage.setItem('sv_auth', '1');
+    localStorage.setItem('sv_user', username);
     set({ isAuthenticated: true, username });
   },
   clearAuth: () => {
-    sessionStorage.removeItem('sv_auth');
-    sessionStorage.removeItem('sv_user');
+    localStorage.removeItem('sv_auth');
+    localStorage.removeItem('sv_user');
     set({ isAuthenticated: false, username: null });
   },
 }));

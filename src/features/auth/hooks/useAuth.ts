@@ -12,8 +12,8 @@ export function useAuthCheck() {
     queryFn: async () => {
       const ok = await checkAuth();
       if (ok) {
-        // Recover username from sessionStorage (set during login), fallback to 'user'
-        const savedUsername = sessionStorage.getItem('sv_user') || 'user';
+        // Recover username from localStorage (set during login), fallback to 'user'
+        const savedUsername = localStorage.getItem('sv_user') || 'user';
         setAuth(savedUsername);
       } else {
         clearAuth();
