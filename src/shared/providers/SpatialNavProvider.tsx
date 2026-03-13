@@ -119,7 +119,6 @@ function SpatialDebugOverlay() {
     function update() {
       const focusKey = getCurrentFocusKey() || 'none';
       const focusedEls = document.querySelectorAll('[data-focused="true"]');
-      const allFocusable = document.querySelectorAll('[tabindex]');
       setInfo((prev) => ({
         ...prev,
         focusKey,
