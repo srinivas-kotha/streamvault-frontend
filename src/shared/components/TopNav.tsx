@@ -211,8 +211,6 @@ function NavItem({ to, label, isActive, icon }: NavItemProps) {
 }
 
 function TopNavFocusGroup({ languages, matchRoute }: { languages: string[]; matchRoute: ReturnType<typeof useMatchRoute> }) {
-  const isHome = matchRoute({ to: '/', fuzzy: false });
-
   const { ref: groupRef, focusKey } = useSpatialContainer({
     focusKey: 'top-nav-items',
     focusable: false,
@@ -221,7 +219,6 @@ function TopNavFocusGroup({ languages, matchRoute }: { languages: string[]; matc
   return (
     <FocusContext.Provider value={focusKey}>
       <div ref={groupRef} className="flex items-center gap-1 overflow-x-auto scrollbar-hide flex-1">
-        <NavItem to="/" label="Home" isActive={!!isHome} />
         {languages.map((lang) => (
           <NavItem
             key={lang}
@@ -243,10 +240,8 @@ function TopNavFocusGroup({ languages, matchRoute }: { languages: string[]; matc
 
 /** Mobile dropdown nav — plain Links, no spatial nav (touch-only) */
 function MobileNavLinks({ languages, matchRoute }: { languages: string[]; matchRoute: ReturnType<typeof useMatchRoute> }) {
-  const isHome = matchRoute({ to: '/', fuzzy: false });
   return (
     <div className="flex flex-col gap-2">
-      <Link to="/" className={`px-4 py-3 rounded-lg text-sm font-medium ${isHome ? 'text-text-primary' : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised/30'}`}>Home</Link>
       {languages.map((lang) => (
         <Link
           key={lang}
