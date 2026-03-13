@@ -83,8 +83,8 @@ export function HeroBanner({ items, autoRotateMs = 8000, parentFocusKey = 'root'
 
   // Stable refs for current-item actions so HeroButton LRUD callbacks
   // always fire the correct handler without re-registering LRUD nodes
-  const handlePlayRef = useRef<() => void>();
-  const handleInfoRef = useRef<() => void>();
+  const handlePlayRef = useRef<() => void>(undefined);
+  const handleInfoRef = useRef<() => void>(undefined);
 
   handlePlayRef.current = () => {
     if (!current) return;
