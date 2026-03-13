@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useMatchRoute, useNavigate } from '@tanstack/react-router';
-import { useLRUD } from '@shared/hooks/useLRUD';
-import { useLRUDContext } from '@shared/providers/LRUDProvider';
-import { useAuthStore, useUIStore } from '@lib/store';
+import { useSpatialFocusable, useSpatialContainer, FocusContext, setFocus } from '@shared/hooks/useSpatialNav';
+import { useAuthStore } from '@lib/store';
 import { useLogout } from '@features/auth/hooks/useAuth';
 import { useLiveCategories } from '@features/live/api';
 import { useVODCategories } from '@features/vod/api';
@@ -16,12 +15,9 @@ export function TopNav() {
   const [scrolled, setScrolled] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
-  // Register the top-nav LRUD container so children (hamburger, nav-items, profile-btn) have a parent
-  const { ref: topNavRef } = useLRUD({
-    id: 'top-nav',
-    parent: 'root',
-    orientation: 'horizontal',
-    isFocusable: false,
+  // Register the top-nav spatial container
+  const { ref: topNavRef, focusKey: topNavFocusKey } = useSpatialContainer({
+    focusKey: 'top-nav',
   });
 
   // Detect languages from categories
@@ -67,82 +63,84 @@ export function TopNav() {
   }, []);
 
   return (
-    <header
-      ref={topNavRef}
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled || mobileMenuOpen
-          ? 'bg-obsidian/90 backdrop-blur-xl border-b border-border-subtle shadow-lg'
-          : 'bg-gradient-to-b from-obsidian/80 to-transparent'
-      }`}
-    >
-      <nav className="flex items-center justify-between h-16 px-4 lg:px-10">
-        <div className="flex items-center">
-          {/* Hamburger Menu Button (Mobile Only) */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setMobileMenuOpen(!mobileMenuOpen);
-              setProfileOpen(false);
-            }}
-            className="md:hidden p-2 mr-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-raised/50 transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              {mobileMenuOpen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              )}
-            </svg>
-          </button>
-
-          {/* Logo */}
-          <Link
-            to="/"
-            className="font-display text-xl font-bold text-text-primary hover:text-teal transition-colors mr-8 flex-shrink-0"
-          >
-            Stream<span className="text-teal">Vault</span>
-          </Link>
-        </div>
-
-        {/* Desktop Nav Items */}
-        <div className="hidden md:flex flex-1 items-center overflow-x-auto scrollbar-hide">
-          <TopNavFocusGroup languages={languages} matchRoute={matchRoute} />
-        </div>
-
-        {/* Profile */}
-        <div className="flex items-center">
-          {/* Search Icon (Mobile Only) */}
-          <Link
-            to="/search"
-            className="md:hidden p-2 mr-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-raised/50 transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </Link>
-          
-          <ProfileMenu
-            username={username}
-            profileOpen={profileOpen}
-            setProfileOpen={(v) => {
-              setProfileOpen(v);
-              if (v) setMobileMenuOpen(false);
-            }}
-            onLogout={() => logoutMutation.mutate()}
-          />
-        </div>
-      </nav>
-
-      {/* Mobile Menu Dropdown (touch-only, no LRUD) */}
-      <div
-        className={`md:hidden fixed top-16 left-0 right-0 bg-surface-raised border-b border-border shadow-xl px-4 py-4 space-y-2 overflow-y-auto transition-transform origin-top duration-300 ${
-          mobileMenuOpen ? 'scale-y-100 opacity-100' : 'scale-y-0 opacity-0 pointer-events-none'
+    <FocusContext.Provider value={topNavFocusKey}>
+      <header
+        ref={topNavRef}
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          scrolled || mobileMenuOpen
+            ? 'bg-obsidian/90 backdrop-blur-xl border-b border-border-subtle shadow-lg'
+            : 'bg-gradient-to-b from-obsidian/80 to-transparent'
         }`}
-        style={{ maxHeight: 'calc(100vh - 64px)' }}
       >
-        <MobileNavLinks languages={languages} matchRoute={matchRoute} />
-      </div>
-    </header>
+        <nav className="flex items-center justify-between h-16 px-4 lg:px-10">
+          <div className="flex items-center">
+            {/* Hamburger Menu Button (Mobile Only) */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setMobileMenuOpen(!mobileMenuOpen);
+                setProfileOpen(false);
+              }}
+              className="md:hidden p-2 mr-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-raised/50 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                {mobileMenuOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
+            </button>
+
+            {/* Logo */}
+            <Link
+              to="/"
+              className="font-display text-xl font-bold text-text-primary hover:text-teal transition-colors mr-8 flex-shrink-0"
+            >
+              Stream<span className="text-teal">Vault</span>
+            </Link>
+          </div>
+
+          {/* Desktop Nav Items */}
+          <div className="hidden md:flex flex-1 items-center overflow-x-auto scrollbar-hide">
+            <TopNavFocusGroup languages={languages} matchRoute={matchRoute} />
+          </div>
+
+          {/* Profile */}
+          <div className="flex items-center">
+            {/* Search Icon (Mobile Only) */}
+            <Link
+              to="/search"
+              className="md:hidden p-2 mr-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-raised/50 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </Link>
+
+            <ProfileMenu
+              username={username}
+              profileOpen={profileOpen}
+              setProfileOpen={(v) => {
+                setProfileOpen(v);
+                if (v) setMobileMenuOpen(false);
+              }}
+              onLogout={() => logoutMutation.mutate()}
+            />
+          </div>
+        </nav>
+
+        {/* Mobile Menu Dropdown (touch-only, no spatial nav) */}
+        <div
+          className={`md:hidden fixed top-16 left-0 right-0 bg-surface-raised border-b border-border shadow-xl px-4 py-4 space-y-2 overflow-y-auto transition-transform origin-top duration-300 ${
+            mobileMenuOpen ? 'scale-y-100 opacity-100' : 'scale-y-0 opacity-0 pointer-events-none'
+          }`}
+          style={{ maxHeight: 'calc(100vh - 64px)' }}
+        >
+          <MobileNavLinks languages={languages} matchRoute={matchRoute} />
+        </div>
+      </header>
+    </FocusContext.Provider>
   );
 }
 
@@ -155,18 +153,14 @@ interface NavItemProps {
 
 function NavItem({ to, label, isActive, icon }: NavItemProps) {
   const navigate = useNavigate();
-  const inputMode = useUIStore((s) => s.inputMode);
 
-  const { ref, isFocused, focusProps } = useLRUD({
-    id: `nav-item-${to}`,
-    parent: 'top-nav-items',
-    onEnter: () => {
+  const { ref, showFocusRing, focusProps } = useSpatialFocusable({
+    focusKey: `nav-item-${to}`,
+    onEnterPress: () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       navigate({ to: to as any });
     },
   });
-
-  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
     <Link
@@ -177,7 +171,7 @@ function NavItem({ to, label, isActive, icon }: NavItemProps) {
       className={`relative flex items-center gap-1.5 px-4 py-3 rounded-lg text-sm font-medium whitespace-nowrap min-h-[48px] transition-all ${
         isActive
           ? 'text-text-primary'
-          : showFocus
+          : showFocusRing
             ? 'text-text-primary bg-surface-raised/50 ring-2 ring-teal/50'
             : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised/30'
       }`}
@@ -194,36 +188,34 @@ function NavItem({ to, label, isActive, icon }: NavItemProps) {
 function TopNavFocusGroup({ languages, matchRoute }: { languages: string[]; matchRoute: ReturnType<typeof useMatchRoute> }) {
   const isHome = matchRoute({ to: '/', fuzzy: false });
 
-  // Single LRUD registration for nav items — always horizontal, always focusable
-  const { ref: groupRef } = useLRUD({
-    id: 'top-nav-items',
-    parent: 'top-nav',
-    orientation: 'horizontal',
-    isFocusable: false,
+  const { ref: groupRef, focusKey } = useSpatialContainer({
+    focusKey: 'top-nav-items',
   });
 
   return (
-    <div ref={groupRef} className="flex items-center gap-1 overflow-x-auto scrollbar-hide flex-1">
-      <NavItem to="/" label="Home" isActive={!!isHome} />
-      {languages.map((lang) => (
-        <NavItem
-          key={lang}
-          to={`/language/${lang.toLowerCase()}`}
-          label={lang}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          isActive={!!matchRoute({ to: `/language/${lang.toLowerCase()}` as any, fuzzy: true })}
-        />
-      ))}
-      <NavItem to="/search" label="Search" isActive={!!matchRoute({ to: '/search', fuzzy: true })} icon={
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-      } />
-    </div>
+    <FocusContext.Provider value={focusKey}>
+      <div ref={groupRef} className="flex items-center gap-1 overflow-x-auto scrollbar-hide flex-1">
+        <NavItem to="/" label="Home" isActive={!!isHome} />
+        {languages.map((lang) => (
+          <NavItem
+            key={lang}
+            to={`/language/${lang.toLowerCase()}`}
+            label={lang}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            isActive={!!matchRoute({ to: `/language/${lang.toLowerCase()}` as any, fuzzy: true })}
+          />
+        ))}
+        <NavItem to="/search" label="Search" isActive={!!matchRoute({ to: '/search', fuzzy: true })} icon={
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        } />
+      </div>
+    </FocusContext.Provider>
   );
 }
 
-/** Mobile dropdown nav — plain Links, no LRUD registration (touch-only) */
+/** Mobile dropdown nav — plain Links, no spatial nav (touch-only) */
 function MobileNavLinks({ languages, matchRoute }: { languages: string[]; matchRoute: ReturnType<typeof useMatchRoute> }) {
   const isHome = matchRoute({ to: '/', fuzzy: false });
   return (
@@ -245,6 +237,85 @@ function MobileNavLinks({ languages, matchRoute }: { languages: string[]; matchR
   );
 }
 
+/**
+ * Profile dropdown menu items — extracted into a separate component
+ * that only mounts when profileOpen is true (norigin conditional render pattern:
+ * never call useFocusable then conditionally return null).
+ */
+function ProfileDropdownItems({
+  onNavigate,
+  onLogout,
+}: {
+  onNavigate: (to: string) => void;
+  onLogout: () => void;
+}) {
+  const { ref: menuRef, focusKey: menuFocusKey } = useSpatialContainer({
+    focusKey: 'profile-menu',
+  });
+
+  const { ref: favRef, showFocusRing: favShowFocus, focusProps: favProps } = useSpatialFocusable({
+    focusKey: 'profile-menu-fav',
+    onEnterPress: () => onNavigate('/favorites'),
+  });
+
+  const { ref: histRef, showFocusRing: histShowFocus, focusProps: histProps } = useSpatialFocusable({
+    focusKey: 'profile-menu-history',
+    onEnterPress: () => onNavigate('/history'),
+  });
+
+  const { ref: logoutRef, showFocusRing: logoutShowFocus, focusProps: logoutProps } = useSpatialFocusable({
+    focusKey: 'profile-menu-logout',
+    onEnterPress: onLogout,
+  });
+
+  return (
+    <FocusContext.Provider value={menuFocusKey}>
+      <div ref={menuRef} role="menu" className="absolute right-0 top-full mt-2 w-48 py-2 bg-surface-raised border border-border rounded-lg shadow-xl z-[60]">
+        <Link
+          ref={favRef}
+          to="/favorites"
+          role="menuitem"
+          {...favProps}
+          className={`block px-4 py-2.5 text-sm min-h-[44px] flex items-center transition-colors ${
+            favShowFocus
+              ? 'text-text-primary bg-teal/10 ring-1 ring-teal/40'
+              : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
+          }`}
+        >
+          Favorites
+        </Link>
+        <Link
+          ref={histRef}
+          to="/history"
+          role="menuitem"
+          {...histProps}
+          className={`block px-4 py-2.5 text-sm min-h-[44px] flex items-center transition-colors ${
+            histShowFocus
+              ? 'text-text-primary bg-teal/10 ring-1 ring-teal/40'
+              : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
+          }`}
+        >
+          Watch History
+        </Link>
+        <hr className="my-1 border-border-subtle" />
+        <button
+          ref={logoutRef}
+          role="menuitem"
+          onClick={onLogout}
+          {...logoutProps}
+          className={`w-full text-left px-4 py-2.5 text-sm min-h-[44px] transition-colors ${
+            logoutShowFocus
+              ? 'text-error bg-error/10 ring-1 ring-error/40'
+              : 'text-error hover:bg-surface-hover'
+          }`}
+        >
+          Sign Out
+        </button>
+      </div>
+    </FocusContext.Provider>
+  );
+}
+
 function ProfileMenu({
   username,
   profileOpen,
@@ -257,60 +328,32 @@ function ProfileMenu({
   onLogout: () => void;
 }) {
   const navigate = useNavigate();
-  const inputMode = useUIStore((s) => s.inputMode);
-  const { lrud } = useLRUDContext();
   const prevProfileOpen = useRef(profileOpen);
 
-  // When profile menu closes, reassign focus to profile button to prevent
-  // LRUD focus from being stranded on now-invisible menu items
+  // When profile menu closes, restore focus to profile button
   useEffect(() => {
     if (prevProfileOpen.current && !profileOpen) {
-      try { lrud.assignFocus('profile-btn'); } catch { /* noop */ }
+      setFocus('profile-btn');
     }
     prevProfileOpen.current = profileOpen;
-  }, [profileOpen, lrud]);
+  }, [profileOpen]);
 
-  // Register the profile-menu LRUD container so dropdown children have a parent
-  const { ref: menuRef } = useLRUD({
-    id: 'profile-menu',
-    parent: 'top-nav',
-    orientation: 'vertical',
-    isFocusable: false,
+  const { ref: profileBtnRef, showFocusRing: showProfileFocus, focusProps: profileFocusProps } = useSpatialFocusable({
+    focusKey: 'profile-btn',
+    onEnterPress: () => setProfileOpen(!profileOpen),
   });
 
-  const { ref: profileBtnRef, isFocused: profileFocused } = useLRUD({
-    id: 'profile-btn',
-    parent: 'top-nav',
-    onEnter: () => setProfileOpen(!profileOpen),
-  });
-
-  const { ref: favRef, isFocused: favFocused, focusProps: favProps } = useLRUD({
-    id: 'profile-menu-fav',
-    parent: 'profile-menu',
-    isFocusable: profileOpen,
-    onEnter: () => { navigate({ to: '/favorites' }); setProfileOpen(false); },
-  });
-
-  const { ref: histRef, isFocused: histFocused, focusProps: histProps } = useLRUD({
-    id: 'profile-menu-history',
-    parent: 'profile-menu',
-    isFocusable: profileOpen,
-    onEnter: () => { navigate({ to: '/history' }); setProfileOpen(false); },
-  });
-
-  const { ref: logoutRef, isFocused: logoutFocused, focusProps: logoutProps } = useLRUD({
-    id: 'profile-menu-logout',
-    parent: 'profile-menu',
-    isFocusable: profileOpen,
-    onEnter: onLogout,
-  });
-
-  const showProfileFocus = profileFocused && inputMode === 'keyboard';
+  const handleNavigate = (to: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    navigate({ to: to as any });
+    setProfileOpen(false);
+  };
 
   return (
     <div className="relative ml-4 flex-shrink-0">
       <button
         ref={profileBtnRef}
+        {...profileFocusProps}
         onClick={(e) => { e.stopPropagation(); setProfileOpen(!profileOpen); }}
         aria-expanded={profileOpen}
         aria-haspopup="menu"
@@ -325,48 +368,10 @@ function ProfileMenu({
       </button>
 
       {profileOpen && (
-        <div ref={menuRef} role="menu" className="absolute right-0 top-full mt-2 w-48 py-2 bg-surface-raised border border-border rounded-lg shadow-xl z-[60]">
-          <Link
-            ref={favRef}
-            to="/favorites"
-            role="menuitem"
-            {...favProps}
-            className={`block px-4 py-2.5 text-sm min-h-[44px] flex items-center transition-colors ${
-              favFocused && inputMode === 'keyboard'
-                ? 'text-text-primary bg-teal/10 ring-1 ring-teal/40'
-                : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
-            }`}
-          >
-            Favorites
-          </Link>
-          <Link
-            ref={histRef}
-            to="/history"
-            role="menuitem"
-            {...histProps}
-            className={`block px-4 py-2.5 text-sm min-h-[44px] flex items-center transition-colors ${
-              histFocused && inputMode === 'keyboard'
-                ? 'text-text-primary bg-teal/10 ring-1 ring-teal/40'
-                : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
-            }`}
-          >
-            Watch History
-          </Link>
-          <hr className="my-1 border-border-subtle" />
-          <button
-            ref={logoutRef}
-            role="menuitem"
-            onClick={onLogout}
-            {...logoutProps}
-            className={`w-full text-left px-4 py-2.5 text-sm min-h-[44px] transition-colors ${
-              logoutFocused && inputMode === 'keyboard'
-                ? 'text-error bg-error/10 ring-1 ring-error/40'
-                : 'text-error hover:bg-surface-hover'
-            }`}
-          >
-            Sign Out
-          </button>
-        </div>
+        <ProfileDropdownItems
+          onNavigate={handleNavigate}
+          onLogout={onLogout}
+        />
       )}
     </div>
   );

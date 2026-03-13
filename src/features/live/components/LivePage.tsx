@@ -10,7 +10,8 @@ import { EmptyState } from '@shared/components/EmptyState';
 import { useDebounce } from '@shared/hooks/useDebounce';
 import { PageTransition } from '@shared/components/PageTransition';
 import { PlayerPage } from '@features/player/components/PlayerPage';
-import { usePlayerStore, useUIStore } from '@lib/store';
+import { usePlayerStore } from '@lib/store';
+import { useSpatialFocusable, useSpatialContainer, FocusContext } from '@shared/hooks/useSpatialNav';
 import type { XtreamCategory } from '@shared/types/api';
 
 type ViewMode = 'grid' | 'epg';
@@ -25,8 +26,6 @@ function categoryPriority(name: string): number {
   }
   return 999;
 }
-
-import { useLRUD } from '@shared/hooks/useLRUD';
 
 // --- SidebarNav: category list with spatial navigation ---
 interface SidebarNavProps {
@@ -45,13 +44,10 @@ function SidebarCategoryButton({
   isActive: boolean;
   onSelect: (id: string) => void;
 }) {
-  const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, isFocused, focusProps } = useLRUD({
-    id: `sidebar-cat-${cat.category_id}`,
-    parent: 'live-sidebar',
-    onEnter: () => onSelect(cat.category_id),
+  const { ref, showFocusRing, focusProps } = useSpatialFocusable({
+    focusKey: `sidebar-cat-${cat.category_id}`,
+    onEnterPress: () => onSelect(cat.category_id),
   });
-  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
     <button
@@ -61,7 +57,7 @@ function SidebarCategoryButton({
       className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
         isActive
           ? 'bg-teal/10 text-teal border-l-2 border-teal font-medium'
-          : showFocus
+          : showFocusRing
             ? 'bg-surface-raised text-text-primary ring-2 ring-teal/50 ring-offset-1 ring-offset-obsidian'
             : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised'
       }`}
@@ -79,9 +75,10 @@ function FocusableViewToggle({ isActive, onSelect, title, icon, id }: {
   icon: React.ReactNode;
   id: string;
 }) {
-  const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, isFocused, focusProps } = useLRUD({ id, parent: 'live-controls', onEnter: onSelect });
-  const showFocus = isFocused && inputMode === 'keyboard';
+  const { ref, showFocusRing, focusProps } = useSpatialFocusable({
+    focusKey: id,
+    onEnterPress: onSelect,
+  });
 
   return (
     <button
@@ -91,7 +88,7 @@ function FocusableViewToggle({ isActive, onSelect, title, icon, id }: {
       className={`p-2 transition-colors ${
         isActive
           ? 'bg-teal/15 text-teal'
-          : showFocus
+          : showFocusRing
             ? 'text-text-primary ring-2 ring-teal/50'
             : 'text-text-muted hover:text-text-primary'
       }`}
@@ -107,13 +104,10 @@ function FocusableLiveSearch({ searchQuery, setSearchQuery }: {
   setSearchQuery: (q: string) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const inputMode = useUIStore((s) => s.inputMode);
-  const { ref: focusRef, isFocused, focusProps } = useLRUD({
-    id: 'live-search',
-    parent: 'live-controls',
-    onEnter: () => inputRef.current?.focus(),
+  const { ref: focusRef, showFocusRing, focusProps } = useSpatialFocusable({
+    focusKey: 'live-search',
+    onEnterPress: () => inputRef.current?.focus(),
   });
-  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
     <div ref={focusRef} {...focusProps} className="flex-1 max-w-sm">
@@ -124,7 +118,7 @@ function FocusableLiveSearch({ searchQuery, setSearchQuery }: {
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         className={`w-full px-4 py-2 bg-surface-raised border rounded-lg text-text-primary placeholder:text-text-muted text-sm focus:outline-none focus:ring-2 focus:ring-teal/50 focus:border-teal-dim transition-all ${
-          showFocus ? 'border-teal ring-2 ring-teal/50' : 'border-border'
+          showFocusRing ? 'border-teal ring-2 ring-teal/50' : 'border-border'
         }`}
       />
     </div>
@@ -132,33 +126,34 @@ function FocusableLiveSearch({ searchQuery, setSearchQuery }: {
 }
 
 function SidebarNav({ categories, activeCatId, isLoading, onSelect }: SidebarNavProps) {
-  const { ref } = useLRUD({
-    id: 'live-sidebar',
-    parent: 'live-layout',
-    orientation: 'vertical',
-    isFocusable: false,
+  const { ref, focusKey } = useSpatialContainer({
+    focusKey: 'live-sidebar',
+    isFocusBoundary: true,
+    focusBoundaryDirections: ['left'],
   });
 
   return (
-    <div ref={ref} className="w-56 flex-shrink-0 overflow-y-auto space-y-1 pr-2 max-h-[calc(100vh-8rem)]">
-      <h2 className="font-display text-lg font-bold text-text-primary mb-3">Live TV</h2>
-      {isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="h-9 bg-surface-raised rounded-lg animate-pulse" />
-          ))}
-        </div>
-      ) : (
-        categories.map((cat) => (
-          <SidebarCategoryButton
-            key={cat.category_id}
-            cat={cat}
-            isActive={activeCatId === cat.category_id}
-            onSelect={onSelect}
-          />
-        ))
-      )}
-    </div>
+    <FocusContext.Provider value={focusKey}>
+      <div ref={ref} className="w-56 flex-shrink-0 overflow-y-auto space-y-1 pr-2 max-h-[calc(100vh-8rem)]">
+        <h2 className="font-display text-lg font-bold text-text-primary mb-3">Live TV</h2>
+        {isLoading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="h-9 bg-surface-raised rounded-lg animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          categories.map((cat) => (
+            <SidebarCategoryButton
+              key={cat.category_id}
+              cat={cat}
+              isActive={activeCatId === cat.category_id}
+              onSelect={onSelect}
+            />
+          ))
+        )}
+      </div>
+    </FocusContext.Provider>
   );
 }
 
@@ -172,44 +167,28 @@ export function LivePage() {
   const debouncedSearch = useDebounce(searchQuery);
 
   // Page container
-  const { ref: contentRef } = useLRUD({
-    id: 'live-content',
-    parent: 'root',
-    orientation: 'vertical',
-    isFocusable: false,
+  const { ref: contentRef, focusKey: contentFocusKey } = useSpatialContainer({
+    focusKey: 'live-content',
   });
 
   // Horizontal split: sidebar | main
-  const { ref: layoutRef } = useLRUD({
-    id: 'live-layout',
-    parent: 'live-content',
-    orientation: 'horizontal',
-    isFocusable: false,
+  const { ref: layoutRef, focusKey: layoutFocusKey } = useSpatialContainer({
+    focusKey: 'live-layout',
   });
 
   // Main content area
-  const { ref: mainRef } = useLRUD({
-    id: 'live-main',
-    parent: 'live-layout',
-    orientation: 'vertical',
-    isFocusable: false,
+  const { ref: mainRef, focusKey: mainFocusKey } = useSpatialContainer({
+    focusKey: 'live-main',
   });
 
   // Controls bar (search + view toggles)
-  useLRUD({
-    id: 'live-controls',
-    parent: 'live-main',
-    orientation: 'horizontal',
-    isFocusable: false,
+  const { focusKey: controlsFocusKey } = useSpatialContainer({
+    focusKey: 'live-controls',
   });
 
   // Channel grid container
-  useLRUD({
-    id: 'live-channel-grid',
-    parent: 'live-main',
-    orientation: 'horizontal',
-    isWrapping: true,
-    isFocusable: false,
+  const { focusKey: channelGridFocusKey } = useSpatialContainer({
+    focusKey: 'live-channel-grid',
   });
 
   const { data: categories, isLoading: catLoading } = useLiveCategories();
@@ -242,6 +221,7 @@ export function LivePage() {
 
   return (
     <PageTransition>
+    <FocusContext.Provider value={contentFocusKey}>
     <div ref={contentRef} className="flex flex-col gap-4 h-full">
       {/* Inline Player */}
       {play && (
@@ -266,8 +246,9 @@ export function LivePage() {
       )}
 
       {/* Featured Channels Section */}
-      {!play && <FeaturedChannels parentFocusKey="live-content" />}
+      {!play && <FeaturedChannels />}
 
+      <FocusContext.Provider value={layoutFocusKey}>
       <div ref={layoutRef} className="flex gap-6 flex-1 min-h-0">
         {/* Category Sidebar — vertical focus boundary */}
         <SidebarNav
@@ -277,10 +258,11 @@ export function LivePage() {
           onSelect={setSelectedCategory}
         />
 
-
         {/* Main Content */}
+        <FocusContext.Provider value={mainFocusKey}>
         <div ref={mainRef} className="flex-1 min-w-0">
           {/* Top bar: Search + View toggle */}
+          <FocusContext.Provider value={controlsFocusKey}>
           <div className="flex items-center gap-3 mb-4">
             <FocusableLiveSearch searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
 
@@ -312,7 +294,9 @@ export function LivePage() {
               />
             </div>
           </div>
+          </FocusContext.Provider>
 
+          <FocusContext.Provider value={channelGridFocusKey}>
           {streamsLoading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
               <SkeletonGrid count={18} aspectRatio="square" />
@@ -326,11 +310,15 @@ export function LivePage() {
           ) : viewMode === 'epg' ? (
             <EPGGrid channels={filteredStreams} />
           ) : (
-            <ChannelGrid channels={filteredStreams} parentFocusKey="live-channel-grid" />
+            <ChannelGrid channels={filteredStreams} />
           )}
+          </FocusContext.Provider>
         </div>
+        </FocusContext.Provider>
       </div>
+      </FocusContext.Provider>
     </div>
+    </FocusContext.Provider>
     </PageTransition>
   );
 }

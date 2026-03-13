@@ -1,15 +1,14 @@
 import { useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useLRUD } from '@shared/hooks/useLRUD';
+import { useSpatialFocusable, useSpatialContainer, FocusContext } from '@shared/hooks/useSpatialNav';
 import { useFeaturedChannels, useEPG } from '../api';
-import { usePlayerStore, useUIStore } from '@lib/store';
+import { usePlayerStore } from '@lib/store';
 import { Badge } from '@shared/components/Badge';
 import type { XtreamLiveStream } from '@shared/types/api';
 
 function FeaturedCard({ channel }: { channel: XtreamLiveStream }) {
   const navigate = useNavigate();
   const playStream = usePlayerStore((s) => s.playStream);
-  const inputMode = useUIStore((s) => s.inputMode);
   const { data: epg } = useEPG(channel.stream_id);
 
   const nowPlaying = epg?.find((item) => {
@@ -22,13 +21,10 @@ function FeaturedCard({ channel }: { channel: XtreamLiveStream }) {
     navigate({ to: '/live', search: { play: String(channel.stream_id) } });
   }, [channel, playStream, navigate]);
 
-  const { ref, isFocused, focusProps } = useLRUD({
-    id: `featured-${channel.stream_id}`,
-    parent: 'featured-channels',
-    onEnter: handleClick,
+  const { ref, showFocusRing, focusProps } = useSpatialFocusable({
+    focusKey: `featured-${channel.stream_id}`,
+    onEnterPress: handleClick,
   });
-
-  const showFocusRing = isFocused && inputMode === 'keyboard';
 
   return (
     <div
@@ -98,20 +94,12 @@ function FeaturedCard({ channel }: { channel: XtreamLiveStream }) {
   );
 }
 
-interface FeaturedChannelsProps {
-  parentFocusKey?: string;
-}
-
-export function FeaturedChannels({ parentFocusKey = 'root' }: FeaturedChannelsProps) {
+export function FeaturedChannels() {
   const { data: channels, isLoading } = useFeaturedChannels();
 
   // Register container for featured channel cards
-  const { ref: containerRef } = useLRUD({
-    id: 'featured-channels',
-    parent: parentFocusKey,
-    orientation: 'horizontal',
-    isWrapping: true,
-    isFocusable: false,
+  const { ref: containerRef, focusKey } = useSpatialContainer({
+    focusKey: 'featured-channels',
   });
 
   if (isLoading) {
@@ -138,11 +126,13 @@ export function FeaturedChannels({ parentFocusKey = 'root' }: FeaturedChannelsPr
         <span className="w-1.5 h-5 bg-gradient-to-b from-teal to-indigo rounded-full" />
         Featured Channels
       </h2>
-      <div ref={containerRef} className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
-        {channels.map((channel) => (
-          <FeaturedCard key={channel.stream_id} channel={channel} />
-        ))}
-      </div>
+      <FocusContext.Provider value={focusKey}>
+        <div ref={containerRef} className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+          {channels.map((channel) => (
+            <FeaturedCard key={channel.stream_id} channel={channel} />
+          ))}
+        </div>
+      </FocusContext.Provider>
     </div>
   );
 }

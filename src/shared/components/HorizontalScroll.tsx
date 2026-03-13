@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { useRef, useState, useEffect, useCallback, forwardRef, type ReactNode } from 'react';
 import { useUIStore } from '@lib/store';
 import { isTVMode } from '@shared/utils/isTVMode';
 
@@ -25,68 +25,68 @@ interface HorizontalScrollProps {
   className?: string;
 }
 
-export function HorizontalScroll({ children, className = '' }: HorizontalScrollProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-  const inputMode = useUIStore((s) => s.inputMode);
+export const HorizontalScroll = forwardRef<HTMLDivElement, HorizontalScrollProps>(
+  function HorizontalScroll({ children, className = '' }, forwardedRef) {
+    const internalRef = useRef<HTMLDivElement>(null);
+    const scrollRef = (forwardedRef as React.RefObject<HTMLDivElement | null>) ?? internalRef;
 
-  const checkScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 0);
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
-  }, []);
+    const [canScrollLeft, setCanScrollLeft] = useState(false);
+    const [canScrollRight, setCanScrollRight] = useState(false);
+    const inputMode = useUIStore((s) => s.inputMode);
 
-  useEffect(() => {
-    checkScroll();
-    const el = scrollRef.current;
-    if (!el) return;
-    el.addEventListener('scroll', checkScroll, { passive: true });
-    const observer = new ResizeObserver(checkScroll);
-    observer.observe(el);
-    return () => {
-      el.removeEventListener('scroll', checkScroll);
-      observer.disconnect();
+    const checkScroll = useCallback(() => {
+      const el = scrollRef.current;
+      if (!el) return;
+      setCanScrollLeft(el.scrollLeft > 0);
+      setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+    }, [scrollRef]);
+
+    useEffect(() => {
+      checkScroll();
+      const el = scrollRef.current;
+      if (!el) return;
+      el.addEventListener('scroll', checkScroll, { passive: true });
+      const observer = new ResizeObserver(checkScroll);
+      observer.observe(el);
+      return () => {
+        el.removeEventListener('scroll', checkScroll);
+        observer.disconnect();
+      };
+    }, [checkScroll, scrollRef]);
+
+    const scroll = (direction: 'left' | 'right') => {
+      const el = scrollRef.current;
+      if (!el) return;
+      const scrollAmount = el.clientWidth * 0.75;
+      el.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth',
+      });
     };
-  }, [checkScroll]);
 
-  const scroll = (direction: 'left' | 'right') => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const scrollAmount = el.clientWidth * 0.75;
-    el.scrollBy({
-      left: direction === 'left' ? -scrollAmount : scrollAmount,
-      behavior: 'smooth',
-    });
-  };
+    const isKeyboard = inputMode === 'keyboard';
 
-  const isKeyboard = inputMode === 'keyboard';
+    const arrowOpacity = isKeyboard
+      ? 'opacity-100'
+      : 'opacity-0 group-hover/scroll:opacity-100';
 
-  // In keyboard mode, arrows are always visible; in mouse mode, only on hover
-  const arrowOpacity = isKeyboard
-    ? 'opacity-100'
-    : 'opacity-0 group-hover/scroll:opacity-100';
+    return (
+      <div className={`group/scroll relative ${className}`}>
+        {!isTVMode && canScrollLeft && (
+          <ScrollArrow direction="left" onClick={() => scroll('left')} arrowOpacity={arrowOpacity} />
+        )}
 
-  return (
-    <div className={`group/scroll relative ${className}`}>
-      {/* Left arrow — hidden in TV mode (D-pad users scroll via focus + scrollIntoView) */}
-      {!isTVMode && canScrollLeft && (
-        <ScrollArrow direction="left" onClick={() => scroll('left')} arrowOpacity={arrowOpacity} />
-      )}
+        <div
+          ref={scrollRef}
+          className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth"
+        >
+          {children}
+        </div>
 
-      {/* Scrollable area */}
-      <div
-        ref={scrollRef}
-        className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth"
-      >
-        {children}
+        {!isTVMode && canScrollRight && (
+          <ScrollArrow direction="right" onClick={() => scroll('right')} arrowOpacity={arrowOpacity} />
+        )}
       </div>
-
-      {/* Right arrow — hidden in TV mode */}
-      {!isTVMode && canScrollRight && (
-        <ScrollArrow direction="right" onClick={() => scroll('right')} arrowOpacity={arrowOpacity} />
-      )}
-    </div>
-  );
-}
+    );
+  }
+);

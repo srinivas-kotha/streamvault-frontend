@@ -9,8 +9,7 @@ import { formatDuration } from '@shared/utils/formatDuration';
 import { parseGenres } from '@shared/utils/parseGenres';
 import { PlayerPage } from '@features/player/components/PlayerPage';
 import { PageTransition } from '@shared/components/PageTransition';
-import { useUIStore } from '@lib/store';
-import { useLRUD } from '@shared/hooks/useLRUD';
+import { useSpatialFocusable, useSpatialContainer, FocusContext } from '@shared/hooks/useSpatialNav';
 
 type EpisodeSortKey = 'latest' | 'oldest' | 'episode';
 const EPISODES_PER_PAGE = 50;
@@ -38,41 +37,36 @@ interface Episode {
   direct_source: string;
 }
 
-// A wrapper component for episodes in the list to give them individual LRUD hooks cleanly
+// A wrapper component for episodes in the list to give them individual spatial nav hooks cleanly
 function FocusableEpisodeItem({
   ep,
   isPlaying,
   activeRef,
   playEpisode,
-  parentFocusKey
 }: {
   ep: Episode;
   isPlaying: boolean;
   activeRef?: React.RefObject<HTMLDivElement | null>;
   playEpisode: (ep: Episode) => void;
-  parentFocusKey: string;
 }) {
-  const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, isFocused, focusProps } = useLRUD({
-    id: `series-ep-${ep.id}`,
-    parent: parentFocusKey,
-    onEnter: () => playEpisode(ep),
+  const { ref, showFocusRing, focusProps } = useSpatialFocusable({
+    focusKey: `series-ep-${ep.id}`,
+    onEnterPress: () => playEpisode(ep),
   });
-  
-  const showFocus = isFocused && inputMode === 'keyboard';
+
   const addedDate = formatEpisodeDate(ep.added);
 
   return (
     <div
       ref={(el: HTMLDivElement | null) => {
-        ref(el);
+        (ref as React.MutableRefObject<HTMLDivElement | null>).current = el;
         if (activeRef && isPlaying) activeRef.current = el;
       }}
       {...focusProps}
       className={`flex gap-4 p-3 lg:p-4 rounded-xl transition-all group cursor-pointer min-h-[72px] outline-none ${
         isPlaying
           ? 'bg-teal/10 border border-teal/30'
-          : showFocus 
+          : showFocusRing
             ? 'bg-surface-raised ring-2 ring-teal ring-offset-1 ring-offset-obsidian border border-teal'
             : 'bg-surface-raised/50 border border-border-subtle hover:border-teal/20 hover:bg-surface-raised'
       }`}
@@ -330,51 +324,36 @@ export function SeriesDetail() {
     }
   };
 
-  const inputMode = useUIStore((s) => s.inputMode);
-
-  const { ref: contentRef } = useLRUD({
-    id: `series-content-${seriesId}`,
-    parent: 'root',
-    orientation: 'vertical',
-    isFocusable: false,
+  const { ref: contentRef, focusKey: contentFocusKey } = useSpatialContainer({
+    focusKey: `series-content-${seriesId}`,
   });
 
-  useLRUD({
-    id: `series-actions-${seriesId}`,
-    parent: `series-content-${seriesId}`,
-    orientation: 'horizontal',
-    isFocusable: false,
+  const { focusKey: actionsFocusKey } = useSpatialContainer({
+    focusKey: `series-actions-${seriesId}`,
   });
 
-  useLRUD({
-    id: `series-episodes-${seriesId}`,
-    parent: `series-content-${seriesId}`,
-    orientation: 'vertical',
-    isFocusable: false,
+  const { focusKey: episodesFocusKey } = useSpatialContainer({
+    focusKey: `series-episodes-${seriesId}`,
   });
 
-  const { ref: backRef, isFocused: backFocused, focusProps: backFocusProps } = useLRUD({
-    id: `series-back-${seriesId}`,
-    parent: `series-actions-${seriesId}`,
-    onEnter: () => navigate({ to: '/series' }),
+  const { ref: backRef, showFocusRing: backFocusRing, focusProps: backFocusProps } = useSpatialFocusable({
+    focusKey: `series-back-${seriesId}`,
+    onEnterPress: () => navigate({ to: '/series' }),
   });
 
-  const { ref: closeRef, isFocused: closeFocused, focusProps: closeFocusProps } = useLRUD({
-    id: `series-close-${seriesId}`,
-    parent: `series-actions-${seriesId}`,
-    onEnter: () => setPlayingEpisodeId(null),
+  const { ref: closeRef, showFocusRing: closeFocusRing, focusProps: closeFocusProps } = useSpatialFocusable({
+    focusKey: `series-close-${seriesId}`,
+    onEnterPress: () => setPlayingEpisodeId(null),
   });
 
-  const { ref: loadMoreRef, isFocused: loadMoreFocused, focusProps: loadMoreFocusProps } = useLRUD({
-    id: `series-load-more-${seriesId}`,
-    parent: `series-episodes-${seriesId}`,
-    onEnter: handleLoadMore,
+  const { ref: loadMoreRef, showFocusRing: loadMoreFocusRing, focusProps: loadMoreFocusProps } = useSpatialFocusable({
+    focusKey: `series-load-more-${seriesId}`,
+    onEnterPress: handleLoadMore,
   });
 
-  const { ref: resumeRef, isFocused: resumeFocused, focusProps: resumeFocusProps } = useLRUD({
-    id: `series-resume-${seriesId}`,
-    parent: `series-actions-${seriesId}`,
-    onEnter: () => {
+  const { ref: resumeRef, showFocusRing: resumeFocusRing, focusProps: resumeFocusProps } = useSpatialFocusable({
+    focusKey: `series-resume-${seriesId}`,
+    onEnterPress: () => {
       if (!lastWatchedEpisode) return;
       setPlayingEpisodeId(String(lastWatchedEpisode.content_id));
       setPlayingEpisodeName(lastWatchedEpisode.content_name || data?.info.name || '');
@@ -410,344 +389,349 @@ export function SeriesDetail() {
 
   return (
     <PageTransition>
-      <div ref={contentRef} className="pb-12">
-        {/* Back button */}
-        <div className="px-6 lg:px-10 pt-4 mb-4">
-          <button
-            ref={backRef}
-            {...backFocusProps}
-            onClick={() => navigate({ to: '/series' })}
-            className={`flex items-center gap-1.5 text-text-secondary hover:text-text-primary text-sm transition-colors min-h-[44px] rounded-lg px-2 py-1 ${
-              backFocused && inputMode === 'keyboard' ? 'ring-2 ring-teal bg-surface-raised' : ''
-            }`}
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Series
-          </button>
-        </div>
-
-        {/* Hero with backdrop */}
-        <div className="relative overflow-hidden mb-6">
-          <div className="aspect-[21/9] relative bg-surface max-h-[400px]">
-            {info.backdrop_path?.[0] ? (
-              <img
-                src={info.backdrop_path[0]}
-                alt={info.name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              />
-            ) : info.cover ? (
-              <img
-                src={info.cover}
-                alt={info.name}
-                className="w-full h-full object-cover blur-sm scale-110"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              />
-            ) : null}
-            <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/60 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-r from-obsidian/70 via-transparent to-transparent" />
-          </div>
-          <div className="absolute bottom-0 left-0 right-0 px-6 lg:px-10 pb-6">
-            <h1 className="font-display text-3xl lg:text-4xl font-bold text-text-primary mb-3">
-              {info.name}
-            </h1>
-            <div className="flex items-center gap-3 flex-wrap mb-3">
-              {info.rating && (
-                <StarRating rating={parseFloat(info.rating)} max={10} size="md" />
-              )}
-              {info.releaseDate && (
-                <span className="text-text-secondary text-sm">
-                  {info.releaseDate.slice(0, 4)}
-                </span>
-              )}
-              <span className="text-text-secondary text-sm">
-                {seasons.length} Season{seasons.length !== 1 ? 's' : ''}
-              </span>
-              {channelName && (
-                <Badge variant="default">{channelName}</Badge>
-              )}
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              {parseGenres(info.genre).map((g) => (
-                <Badge key={g} variant="teal">
-                  {g}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Inline Player */}
-        {playingEpisodeId && (
-          <div className="relative mb-6 mx-6 lg:mx-10">
-            <button
-              ref={closeRef}
-              {...closeFocusProps}
-              onClick={() => setPlayingEpisodeId(null)}
-              className={`absolute top-3 right-3 z-20 p-2.5 bg-obsidian/80 rounded-full text-text-muted hover:text-text-primary transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center ${
-                closeFocused && inputMode === 'keyboard' ? 'ring-2 ring-teal bg-teal/20 text-text-primary' : ''
-              }`}
-              title="Close player"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            <PlayerPage
-              streamType="series"
-              streamId={playingEpisodeId}
-              streamName={playingEpisodeName}
-              startTime={resumeStartTime}
-              hasNext={currentEpisodeIndex < allEpisodes.length - 1}
-              hasPrev={currentEpisodeIndex > 0}
-              onNext={playNext}
-              onPrev={playPrev}
-              onClose={() => setPlayingEpisodeId(null)}
-            />
-          </div>
-        )}
-
-        {/* Resume Banner */}
-        {lastWatchedEpisode && !playingEpisodeId && (
-          <div className="mx-6 lg:mx-10 mb-6">
-            <button
-              ref={resumeRef}
-              {...resumeFocusProps}
-              onClick={() => {
-                setPlayingEpisodeId(String(lastWatchedEpisode.content_id));
-                setPlayingEpisodeName(lastWatchedEpisode.content_name || info.name);
-                setResumeStartTime(lastWatchedEpisode.progress_seconds ?? 0);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className={`w-full flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-teal/10 to-indigo/10 border border-teal/20 hover:border-teal/40 transition-all group ${
-                resumeFocused && inputMode === 'keyboard' ? 'ring-2 ring-teal ring-offset-2 ring-offset-obsidian' : ''
-              }`}
-            >
-              <div className="w-12 h-12 rounded-full bg-teal/20 flex items-center justify-center flex-shrink-0 group-hover:bg-teal/30 transition-colors">
-                <svg className="w-6 h-6 text-teal" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              </div>
-              <div className="flex-1 text-left min-w-0">
-                <p className="text-text-primary text-sm font-medium truncate">
-                  Resume: {lastWatchedEpisode.content_name}
-                </p>
-                <p className="text-text-muted text-xs">
-                  {lastWatchedEpisode.progress_seconds > 0 &&
-                    lastWatchedEpisode.duration_seconds > 0 && (
-                      <>
-                        {formatDuration(lastWatchedEpisode.progress_seconds)} /{' '}
-                        {formatDuration(lastWatchedEpisode.duration_seconds)} watched
-                      </>
-                    )}
-                </p>
-              </div>
-              <div className="flex-shrink-0">
-                {lastWatchedEpisode.progress_seconds > 0 &&
-                  lastWatchedEpisode.duration_seconds > 0 && (
-                    <div className="w-16 h-1.5 bg-surface rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-teal rounded-full"
-                        style={{
-                          width: `${Math.min(
-                            (lastWatchedEpisode.progress_seconds /
-                              lastWatchedEpisode.duration_seconds) *
-                              100,
-                            100
-                          )}%`,
-                        }}
-                      />
-                    </div>
-                  )}
-              </div>
-            </button>
-          </div>
-        )}
-
-        {/* Plot */}
-        {info.plot && (
-          <p className="text-text-secondary text-sm lg:text-base leading-relaxed mb-6 px-6 lg:px-10 max-w-3xl">
-            {info.plot}
-          </p>
-        )}
-
-        {/* Cast/Director */}
-        <div className="flex gap-6 mb-6 text-sm px-6 lg:px-10">
-          {info.director && (
-            <div>
-              <span className="text-text-muted">Director: </span>
-              <span className="text-text-primary">{info.director}</span>
-            </div>
-          )}
-          {info.cast && (
-            <div className="truncate max-w-md">
-              <span className="text-text-muted">Cast: </span>
-              <span className="text-text-secondary">{info.cast}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Season Tabs */}
-        <div className="px-6 lg:px-10 mb-4">
-          <div
-            className="flex gap-2 overflow-x-auto scrollbar-hide pb-2"
-            onKeyDown={handleSeasonKeyDown}
-            role="tablist"
-          >
-            {computedSeasons.map((season) => (
+      <FocusContext.Provider value={contentFocusKey}>
+        <div ref={contentRef} className="pb-12">
+          <FocusContext.Provider value={actionsFocusKey}>
+            {/* Back button */}
+            <div className="px-6 lg:px-10 pt-4 mb-4">
               <button
-                key={season.season_number}
-                role="tab"
-                aria-selected={activeSeason === season.season_number}
-                onClick={() => {
-                  setActiveSeason(season.season_number);
-                  setEpisodeSearch('');
-                }}
-                className={`px-5 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all min-h-[44px] ${
-                  activeSeason === season.season_number
-                    ? 'bg-teal/15 text-teal border border-teal/30'
-                    : 'bg-surface-raised text-text-secondary border border-border hover:text-text-primary hover:border-teal/20'
+                ref={backRef}
+                {...backFocusProps}
+                onClick={() => navigate({ to: '/series' })}
+                className={`flex items-center gap-1.5 text-text-secondary hover:text-text-primary text-sm transition-colors min-h-[44px] rounded-lg px-2 py-1 ${
+                  backFocusRing ? 'ring-2 ring-teal bg-surface-raised' : ''
                 }`}
               >
-                {season.name} ({season.episode_count})
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to Series
               </button>
-            ))}
-          </div>
-        </div>
+            </div>
 
-        {/* Episode Controls: Search + Sort + Count */}
-        <div className="px-6 lg:px-10 mb-4">
-          <div className="flex items-center gap-3 flex-wrap">
-            {/* Episode search */}
-            <div className="relative flex-1 min-w-[180px] max-w-xs">
-              <svg
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-              <input
-                type="text"
-                placeholder="Search episodes..."
-                value={episodeSearch}
-                onChange={(e) => setEpisodeSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-surface-raised border border-border rounded-lg text-text-primary placeholder:text-text-muted text-sm focus:outline-none focus:ring-2 focus:ring-teal/50 focus:border-teal-dim transition-all"
-              />
-              {episodeSearch && (
+            {/* Hero with backdrop */}
+            <div className="relative overflow-hidden mb-6">
+              <div className="aspect-[21/9] relative bg-surface max-h-[400px]">
+                {info.backdrop_path?.[0] ? (
+                  <img
+                    src={info.backdrop_path[0]}
+                    alt={info.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                ) : info.cover ? (
+                  <img
+                    src={info.cover}
+                    alt={info.name}
+                    className="w-full h-full object-cover blur-sm scale-110"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                ) : null}
+                <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/60 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-r from-obsidian/70 via-transparent to-transparent" />
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 px-6 lg:px-10 pb-6">
+                <h1 className="font-display text-3xl lg:text-4xl font-bold text-text-primary mb-3">
+                  {info.name}
+                </h1>
+                <div className="flex items-center gap-3 flex-wrap mb-3">
+                  {info.rating && (
+                    <StarRating rating={parseFloat(info.rating)} max={10} size="md" />
+                  )}
+                  {info.releaseDate && (
+                    <span className="text-text-secondary text-sm">
+                      {info.releaseDate.slice(0, 4)}
+                    </span>
+                  )}
+                  <span className="text-text-secondary text-sm">
+                    {seasons.length} Season{seasons.length !== 1 ? 's' : ''}
+                  </span>
+                  {channelName && (
+                    <Badge variant="default">{channelName}</Badge>
+                  )}
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {parseGenres(info.genre).map((g) => (
+                    <Badge key={g} variant="teal">
+                      {g}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Inline Player */}
+            {playingEpisodeId && (
+              <div className="relative mb-6 mx-6 lg:mx-10">
                 <button
-                  onClick={() => setEpisodeSearch('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary"
+                  ref={closeRef}
+                  {...closeFocusProps}
+                  onClick={() => setPlayingEpisodeId(null)}
+                  className={`absolute top-3 right-3 z-20 p-2.5 bg-obsidian/80 rounded-full text-text-muted hover:text-text-primary transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center ${
+                    closeFocusRing ? 'ring-2 ring-teal bg-teal/20 text-text-primary' : ''
+                  }`}
+                  title="Close player"
                 >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
-              )}
-            </div>
+                <PlayerPage
+                  streamType="series"
+                  streamId={playingEpisodeId}
+                  streamName={playingEpisodeName}
+                  startTime={resumeStartTime}
+                  hasNext={currentEpisodeIndex < allEpisodes.length - 1}
+                  hasPrev={currentEpisodeIndex > 0}
+                  onNext={playNext}
+                  onPrev={playPrev}
+                  onClose={() => setPlayingEpisodeId(null)}
+                />
+              </div>
+            )}
 
-            {/* Sort pills */}
-            <div className="flex gap-1.5">
-              {(
-                [
-                  { key: 'latest', label: 'Latest First' },
-                  { key: 'oldest', label: 'Oldest First' },
-                  { key: 'episode', label: 'Episode #' },
-                ] as { key: EpisodeSortKey; label: string }[]
-              ).map((opt) => (
+            {/* Resume Banner */}
+            {lastWatchedEpisode && !playingEpisodeId && (
+              <div className="mx-6 lg:mx-10 mb-6">
                 <button
-                  key={opt.key}
-                  onClick={() => setEpisodeSort(opt.key)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                    episodeSort === opt.key
-                      ? 'bg-teal/15 text-teal'
-                      : 'text-text-muted hover:text-text-secondary'
+                  ref={resumeRef}
+                  {...resumeFocusProps}
+                  onClick={() => {
+                    setPlayingEpisodeId(String(lastWatchedEpisode.content_id));
+                    setPlayingEpisodeName(lastWatchedEpisode.content_name || info.name);
+                    setResumeStartTime(lastWatchedEpisode.progress_seconds ?? 0);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className={`w-full flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-teal/10 to-indigo/10 border border-teal/20 hover:border-teal/40 transition-all group ${
+                    resumeFocusRing ? 'ring-2 ring-teal ring-offset-2 ring-offset-obsidian' : ''
                   }`}
                 >
-                  {opt.label}
+                  <div className="w-12 h-12 rounded-full bg-teal/20 flex items-center justify-center flex-shrink-0 group-hover:bg-teal/30 transition-colors">
+                    <svg className="w-6 h-6 text-teal" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 text-left min-w-0">
+                    <p className="text-text-primary text-sm font-medium truncate">
+                      Resume: {lastWatchedEpisode.content_name}
+                    </p>
+                    <p className="text-text-muted text-xs">
+                      {lastWatchedEpisode.progress_seconds > 0 &&
+                        lastWatchedEpisode.duration_seconds > 0 && (
+                          <>
+                            {formatDuration(lastWatchedEpisode.progress_seconds)} /{' '}
+                            {formatDuration(lastWatchedEpisode.duration_seconds)} watched
+                          </>
+                        )}
+                    </p>
+                  </div>
+                  <div className="flex-shrink-0">
+                    {lastWatchedEpisode.progress_seconds > 0 &&
+                      lastWatchedEpisode.duration_seconds > 0 && (
+                        <div className="w-16 h-1.5 bg-surface rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-teal rounded-full"
+                            style={{
+                              width: `${Math.min(
+                                (lastWatchedEpisode.progress_seconds /
+                                  lastWatchedEpisode.duration_seconds) *
+                                  100,
+                                100
+                              )}%`,
+                            }}
+                          />
+                        </div>
+                      )}
+                  </div>
+                </button>
+              </div>
+            )}
+          </FocusContext.Provider>
+
+          {/* Plot */}
+          {info.plot && (
+            <p className="text-text-secondary text-sm lg:text-base leading-relaxed mb-6 px-6 lg:px-10 max-w-3xl">
+              {info.plot}
+            </p>
+          )}
+
+          {/* Cast/Director */}
+          <div className="flex gap-6 mb-6 text-sm px-6 lg:px-10">
+            {info.director && (
+              <div>
+                <span className="text-text-muted">Director: </span>
+                <span className="text-text-primary">{info.director}</span>
+              </div>
+            )}
+            {info.cast && (
+              <div className="truncate max-w-md">
+                <span className="text-text-muted">Cast: </span>
+                <span className="text-text-secondary">{info.cast}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Season Tabs */}
+          <div className="px-6 lg:px-10 mb-4">
+            <div
+              className="flex gap-2 overflow-x-auto scrollbar-hide pb-2"
+              onKeyDown={handleSeasonKeyDown}
+              role="tablist"
+            >
+              {computedSeasons.map((season) => (
+                <button
+                  key={season.season_number}
+                  role="tab"
+                  aria-selected={activeSeason === season.season_number}
+                  onClick={() => {
+                    setActiveSeason(season.season_number);
+                    setEpisodeSearch('');
+                  }}
+                  className={`px-5 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all min-h-[44px] ${
+                    activeSeason === season.season_number
+                      ? 'bg-teal/15 text-teal border border-teal/30'
+                      : 'bg-surface-raised text-text-secondary border border-border hover:text-text-primary hover:border-teal/20'
+                  }`}
+                >
+                  {season.name} ({season.episode_count})
                 </button>
               ))}
             </div>
-
-            {/* Count */}
-            <span className="text-text-muted text-xs ml-auto">
-              {filteredEpisodes.length} episode{filteredEpisodes.length !== 1 ? 's' : ''}
-              {episodeSearch && ` matching "${episodeSearch}"`}
-            </span>
           </div>
-        </div>
 
-        {/* Episode List */}
-        <div ref={episodeListRef} className="space-y-2 px-6 lg:px-10">
-          {visibleEpisodes.length === 0 && episodeSearch ? (
-            <div className="py-12 text-center">
-              <p className="text-text-muted text-sm">
-                No episodes matching "{episodeSearch}"
+          {/* Episode Controls: Search + Sort + Count */}
+          <div className="px-6 lg:px-10 mb-4">
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Episode search */}
+              <div className="relative flex-1 min-w-[180px] max-w-xs">
+                <svg
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search episodes..."
+                  value={episodeSearch}
+                  onChange={(e) => setEpisodeSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-surface-raised border border-border rounded-lg text-text-primary placeholder:text-text-muted text-sm focus:outline-none focus:ring-2 focus:ring-teal/50 focus:border-teal-dim transition-all"
+                />
+                {episodeSearch && (
+                  <button
+                    onClick={() => setEpisodeSearch('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+
+              {/* Sort pills */}
+              <div className="flex gap-1.5">
+                {(
+                  [
+                    { key: 'latest', label: 'Latest First' },
+                    { key: 'oldest', label: 'Oldest First' },
+                    { key: 'episode', label: 'Episode #' },
+                  ] as { key: EpisodeSortKey; label: string }[]
+                ).map((opt) => (
+                  <button
+                    key={opt.key}
+                    onClick={() => setEpisodeSort(opt.key)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      episodeSort === opt.key
+                        ? 'bg-teal/15 text-teal'
+                        : 'text-text-muted hover:text-text-secondary'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Count */}
+              <span className="text-text-muted text-xs ml-auto">
+                {filteredEpisodes.length} episode{filteredEpisodes.length !== 1 ? 's' : ''}
+                {episodeSearch && ` matching "${episodeSearch}"`}
+              </span>
+            </div>
+          </div>
+
+          {/* Episode List */}
+          <FocusContext.Provider value={episodesFocusKey}>
+            <div ref={episodeListRef} className="space-y-2 px-6 lg:px-10">
+              {visibleEpisodes.length === 0 && episodeSearch ? (
+                <div className="py-12 text-center">
+                  <p className="text-text-muted text-sm">
+                    No episodes matching "{episodeSearch}"
+                  </p>
+                </div>
+              ) : (
+                visibleEpisodes.map((ep) => {
+                  const isPlaying = playingEpisodeId === String(ep.id);
+                  return (
+                    <FocusableEpisodeItem
+                      key={ep.id}
+                      ep={ep}
+                      isPlaying={isPlaying}
+                      activeRef={highlightRef}
+                      playEpisode={playEpisode}
+                    />
+                  );
+                })
+              )}
+            </div>
+          </FocusContext.Provider>
+
+          {/* Load More */}
+          {hasMore && (
+            <div className="px-6 lg:px-10 mt-4">
+              <button
+                ref={loadMoreRef}
+                {...loadMoreFocusProps}
+                onClick={handleLoadMore}
+                className={`w-full py-3 rounded-xl border text-sm font-medium transition-all ${
+                  loadMoreFocusRing
+                    ? 'bg-surface-raised ring-2 ring-teal ring-offset-2 ring-offset-obsidian text-text-primary'
+                    : 'bg-surface-raised border-border text-text-secondary hover:border-teal/20 hover:text-text-primary'
+                }`}
+              >
+                Load More ({filteredEpisodes.length - visibleCount} remaining)
+              </button>
+            </div>
+          )}
+
+          {/* Total episodes info */}
+          {filteredEpisodes.length > EPISODES_PER_PAGE && (
+            <div className="px-6 lg:px-10 mt-3">
+              <p className="text-text-muted text-xs text-center">
+                Showing {Math.min(visibleCount, filteredEpisodes.length)} of{' '}
+                {filteredEpisodes.length} episodes
               </p>
             </div>
-          ) : (
-            visibleEpisodes.map((ep) => {
-              const isPlaying = playingEpisodeId === String(ep.id);
-              return (
-                <FocusableEpisodeItem
-                  key={ep.id}
-                  ep={ep}
-                  isPlaying={isPlaying}
-                  activeRef={highlightRef}
-                  playEpisode={playEpisode}
-                  parentFocusKey={`series-episodes-${seriesId}`}
-                />
-              );
-            })
           )}
         </div>
-
-        {/* Load More */}
-        {hasMore && (
-          <div className="px-6 lg:px-10 mt-4">
-            <button
-              ref={loadMoreRef}
-              {...loadMoreFocusProps}
-              onClick={handleLoadMore}
-              className={`w-full py-3 rounded-xl border text-sm font-medium transition-all ${
-                loadMoreFocused && inputMode === 'keyboard' 
-                  ? 'bg-surface-raised ring-2 ring-teal ring-offset-2 ring-offset-obsidian text-text-primary' 
-                  : 'bg-surface-raised border-border text-text-secondary hover:border-teal/20 hover:text-text-primary'
-              }`}
-            >
-              Load More ({filteredEpisodes.length - visibleCount} remaining)
-            </button>
-          </div>
-        )}
-
-        {/* Total episodes info */}
-        {filteredEpisodes.length > EPISODES_PER_PAGE && (
-          <div className="px-6 lg:px-10 mt-3">
-            <p className="text-text-muted text-xs text-center">
-              Showing {Math.min(visibleCount, filteredEpisodes.length)} of{' '}
-              {filteredEpisodes.length} episodes
-            </p>
-          </div>
-        )}
-      </div>
+      </FocusContext.Provider>
     </PageTransition>
   );
 }

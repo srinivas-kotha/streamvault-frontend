@@ -1,7 +1,6 @@
 import { type SortOption, SORT_OPTIONS } from '@shared/utils/sortContent';
 import type { FilterState } from '@shared/utils/filterContent';
-import { useLRUD } from '@shared/hooks/useLRUD';
-import { useUIStore } from '@lib/store';
+import { useSpatialFocusable } from '@shared/hooks/useSpatialNav';
 
 interface SortFilterBarProps {
   sort: SortOption;
@@ -11,25 +10,25 @@ interface SortFilterBarProps {
   genres: string[];
 }
 
-function FocusableChip({ id, parent, label, isActive, onSelect, activeClass, inactiveClass }: {
+function FocusableChip({ id, label, isActive, onSelect, activeClass, inactiveClass }: {
   id: string;
-  parent: string;
   label: string;
   isActive: boolean;
   onSelect: () => void;
   activeClass: string;
   inactiveClass: string;
 }) {
-  const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, isFocused, focusProps } = useLRUD({ id, parent, onEnter: onSelect });
-  const showFocus = isFocused && inputMode === 'keyboard';
+  const { ref, showFocusRing, focusProps } = useSpatialFocusable({
+    focusKey: id,
+    onEnterPress: onSelect,
+  });
 
   return (
     <button
       ref={ref}
       {...focusProps}
       onClick={onSelect}
-      className={isActive ? activeClass : showFocus ? `${inactiveClass} ring-2 ring-teal/50` : inactiveClass}
+      className={isActive ? activeClass : showFocusRing ? `${inactiveClass} ring-2 ring-teal/50` : inactiveClass}
     >
       {label}
     </button>
@@ -61,7 +60,6 @@ export function SortFilterBar({ sort, onSortChange, filters, onFiltersChange, ge
         {[null, 3.5, 4].map((r) => (
           <FocusableChip
             id={`vod-rating-${r ?? 'none'}`}
-            parent="root"
             key={r ?? 'all'}
             label={`${r === null ? 'Any' : `${r}+`} ★`}
             isActive={filters.minRating === r}
@@ -77,7 +75,6 @@ export function SortFilterBar({ sort, onSortChange, filters, onFiltersChange, ge
         <div className="flex gap-1.5 overflow-x-auto pb-1 max-w-[50%]">
           <FocusableChip
             id="vod-genre-all"
-            parent="root"
             label="All Genres"
             isActive={!filters.genre}
             onSelect={() => onFiltersChange({ ...filters, genre: null })}
@@ -87,7 +84,6 @@ export function SortFilterBar({ sort, onSortChange, filters, onFiltersChange, ge
           {genres.slice(0, 15).map((g) => (
             <FocusableChip
               id={`vod-genre-${g}`}
-              parent="root"
               key={g}
               label={g}
               isActive={filters.genre === g}

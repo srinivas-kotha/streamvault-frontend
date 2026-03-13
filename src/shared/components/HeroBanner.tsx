@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useLRUD } from '@shared/hooks/useLRUD';
+import { useSpatialFocusable, useSpatialContainer, FocusContext } from '@shared/hooks/useSpatialNav';
 import { usePlayerStore, useUIStore } from '@lib/store';
 
 export interface HeroItem {
@@ -17,13 +17,12 @@ export interface HeroItem {
 interface HeroBannerProps {
   items: HeroItem[];
   autoRotateMs?: number;
-  parentFocusKey?: string;
 }
 
 /**
- * HeroButton uses STABLE LRUD IDs ('hero-play' and 'hero-info') regardless of
+ * HeroButton uses STABLE focus keys ('hero-play' and 'hero-info') regardless of
  * which carousel item is displayed. This prevents the auto-rotate from
- * destroying focused LRUD nodes and breaking all D-pad navigation.
+ * destroying focused nodes and breaking all D-pad navigation.
  *
  * The onClick/onEnter callbacks use refs to always reference the CURRENT item.
  */
@@ -38,14 +37,11 @@ function HeroButton({
   variant?: 'primary' | 'secondary';
   id: string;
 }) {
-  const inputMode = useUIStore((s) => s.inputMode);
   const handleAction = useCallback(() => onClickRef.current?.(), [onClickRef]);
-  const { ref, isFocused, focusProps } = useLRUD({
-    id,
-    parent: 'hero-banner',
-    onEnter: handleAction,
+  const { ref, showFocusRing, focusProps } = useSpatialFocusable({
+    focusKey: id,
+    onEnterPress: handleAction,
   });
-  const showFocus = isFocused && inputMode === 'keyboard';
 
   const base = variant === 'primary'
     ? 'bg-teal text-obsidian font-semibold hover:bg-teal/90'
@@ -57,7 +53,7 @@ function HeroButton({
       {...focusProps}
       onClick={handleAction}
       className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all min-h-[48px] text-sm lg:text-base ${base} ${
-        showFocus ? 'ring-2 ring-teal ring-offset-2 ring-offset-obsidian scale-105' : ''
+        showFocusRing ? 'ring-2 ring-teal ring-offset-2 ring-offset-obsidian scale-105' : ''
       }`}
     >
       {children}
@@ -65,7 +61,7 @@ function HeroButton({
   );
 }
 
-export function HeroBanner({ items, autoRotateMs = 8000, parentFocusKey = 'root' }: HeroBannerProps) {
+export function HeroBanner({ items, autoRotateMs = 8000 }: HeroBannerProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const navigate = useNavigate();
   const playStream = usePlayerStore((s) => s.playStream);
@@ -74,15 +70,12 @@ export function HeroBanner({ items, autoRotateMs = 8000, parentFocusKey = 'root'
   const safeItems = useMemo(() => items.slice(0, 5), [items]);
   const current = safeItems[activeIndex];
 
-  const { ref: heroRef } = useLRUD({
-    id: 'hero-banner',
-    parent: parentFocusKey,
-    isFocusable: false,
-    orientation: 'horizontal',
+  const { ref: heroRef, focusKey } = useSpatialContainer({
+    focusKey: 'hero-banner',
   });
 
-  // Stable refs for current-item actions so HeroButton LRUD callbacks
-  // always fire the correct handler without re-registering LRUD nodes
+  // Stable refs for current-item actions so HeroButton callbacks
+  // always fire the correct handler without re-registering nodes
   const handlePlayRef = useRef<() => void>(undefined);
   const handleInfoRef = useRef<() => void>(undefined);
 
@@ -119,7 +112,8 @@ export function HeroBanner({ items, autoRotateMs = 8000, parentFocusKey = 'root'
   if (!current) return null;
 
   return (
-    <div ref={heroRef} className="relative w-full -mt-16" style={{ height: 'clamp(300px, 60vh, 600px)' }}>
+    <FocusContext.Provider value={focusKey}>
+      <div ref={heroRef} className="relative w-full -mt-16" style={{ height: 'clamp(300px, 60vh, 600px)' }}>
         {/* Backdrop image */}
         <div className="absolute inset-0 overflow-hidden">
           <img
@@ -168,7 +162,7 @@ export function HeroBanner({ items, autoRotateMs = 8000, parentFocusKey = 'root'
               </p>
             )}
 
-            {/* Action buttons — stable LRUD IDs survive carousel rotation */}
+            {/* Action buttons — stable focus keys survive carousel rotation */}
             <div className="flex items-center gap-3">
               <HeroButton id="hero-play" onClickRef={handlePlayRef} variant="primary">
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -206,5 +200,6 @@ export function HeroBanner({ items, autoRotateMs = 8000, parentFocusKey = 'root'
           )}
         </div>
       </div>
+    </FocusContext.Provider>
   );
 }

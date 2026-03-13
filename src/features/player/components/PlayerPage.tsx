@@ -6,8 +6,13 @@ import { usePlayerKeyboard } from '../hooks/usePlayerKeyboard';
 import { isTVMode } from '@shared/utils/isTVMode';
 import { useProgressTracking } from '../hooks/useProgressTracking';
 import { usePlayerStore, useUIStore } from '@lib/store';
-import { useLRUD } from '@shared/hooks/useLRUD';
-import { useLRUDContext } from '@shared/providers/LRUDProvider';
+import {
+  useSpatialContainer,
+  FocusContext,
+  setFocus,
+  pauseSpatialNav,
+  resumeSpatialNav,
+} from '@shared/hooks/useSpatialNav';
 
 interface PlayerPageProps {
   streamType: string;
@@ -88,46 +93,34 @@ export function PlayerPage({
     if (!isPlaying) showControls();
   }, [isPlaying, showControls]);
 
-  const { lrud } = useLRUDContext();
-
-  // Spatial Navigation wrapper for player
-  // In TV mode, arrows are intercepted by usePlayerKeyboard (capture phase) so LRUD never sees them.
-  // This effectively traps focus within the player controls.
-  const { ref, isFocused } = useLRUD({
-    id: `player-${streamId}`,
-    parent: 'root',
-    orientation: 'vertical',
-    isFocusable: false,
+  // Spatial Navigation: player container with focus boundary
+  const { ref, focusKey, hasFocusedChild } = useSpatialContainer({
+    focusKey: 'player-container',
+    isFocusBoundary: true,
   });
 
-  // Register 'player-controls' as a container for all control buttons (D-pad navigation)
-  useLRUD({
-    id: 'player-controls',
-    parent: `player-${streamId}`,
-    orientation: 'horizontal',
-    isFocusable: false,
-  });
-
-  // In TV mode: suppress LRUD arrow navigation (player handles seek/volume),
+  // In TV mode: pause spatial nav (player handles seek/volume via usePlayerKeyboard),
   // and auto-focus play/pause when player mounts
   const setSuppressArrowNav = useUIStore((s) => s.setSuppressArrowNav);
   useEffect(() => {
     if (isTVMode) {
       setSuppressArrowNav(true);
+      pauseSpatialNav();
       const timer = setTimeout(() => {
-        try { lrud.assignFocus('player-play-pause'); } catch { /* not registered yet */ }
+        try { setFocus('player-play-pause'); } catch { /* not registered yet */ }
       }, 100);
       return () => {
         clearTimeout(timer);
         setSuppressArrowNav(false);
+        resumeSpatialNav();
       };
     }
-  }, [streamId, lrud, setSuppressArrowNav]);
+  }, [streamId, setSuppressArrowNav]);
 
   // Keep controls visible if user is navigating controls with D-pad
   useEffect(() => {
-    if (isFocused) showControls();
-  }, [isFocused, showControls]);
+    if (hasFocusedChild) showControls();
+  }, [hasFocusedChild, showControls]);
 
   usePlayerKeyboard({
     playerRef,
@@ -196,55 +189,57 @@ export function PlayerPage({
     : 'relative aspect-video bg-black rounded-xl overflow-hidden';
 
   return (
-    <div
-      ref={ref}
-      className={`${playerClass} focus:outline-none`}
-      onMouseMove={showControls}
-      onMouseLeave={() => isPlaying && setControlsVisible(false)}
-      onClick={() => {
-        if (controlsVisible) {
-          setControlsVisible(false);
-        } else {
-          showControls();
-        }
-      }}
-    >
-      <VideoPlayer
-        ref={playerRef}
-        url={streamData.url}
-        isLive={streamData.isLive}
-        format={streamData.format}
-        startTime={startTime}
-        onTimeUpdate={handleTimeUpdate}
-        onEnded={onNext}
-        onError={setError}
-        onQualityLevelsReady={setQualityLevels}
-        onPlayStateChange={setIsPlaying}
-      />
-      <PlayerControls
-        playerRef={playerRef}
-        isPlaying={isPlaying}
-        isLive={isLive}
-        currentTime={currentTime}
-        duration={duration}
-        qualityLevels={qualityLevels}
-        currentQuality={currentQuality}
-        onQualityChange={handleQualityChange}
-        volume={volume}
-        isMuted={isMuted}
-        onVolumeChange={setVolume}
-        onMuteToggle={toggleMute}
-        hasNext={hasNext}
-        hasPrev={hasPrev}
-        onNext={onNext}
-        onPrev={onPrev}
-        visible={controlsVisible}
-      />
-      {streamName && (
-        <div className="absolute top-4 left-4 text-white/80 text-sm font-medium bg-obsidian/50 px-3 py-1 rounded-lg backdrop-blur-sm">
-          {streamName}
-        </div>
-      )}
-    </div>
+    <FocusContext.Provider value={focusKey}>
+      <div
+        ref={ref}
+        className={`${playerClass} focus:outline-none`}
+        onMouseMove={showControls}
+        onMouseLeave={() => isPlaying && setControlsVisible(false)}
+        onClick={() => {
+          if (controlsVisible) {
+            setControlsVisible(false);
+          } else {
+            showControls();
+          }
+        }}
+      >
+        <VideoPlayer
+          ref={playerRef}
+          url={streamData.url}
+          isLive={streamData.isLive}
+          format={streamData.format}
+          startTime={startTime}
+          onTimeUpdate={handleTimeUpdate}
+          onEnded={onNext}
+          onError={setError}
+          onQualityLevelsReady={setQualityLevels}
+          onPlayStateChange={setIsPlaying}
+        />
+        <PlayerControls
+          playerRef={playerRef}
+          isPlaying={isPlaying}
+          isLive={isLive}
+          currentTime={currentTime}
+          duration={duration}
+          qualityLevels={qualityLevels}
+          currentQuality={currentQuality}
+          onQualityChange={handleQualityChange}
+          volume={volume}
+          isMuted={isMuted}
+          onVolumeChange={setVolume}
+          onMuteToggle={toggleMute}
+          hasNext={hasNext}
+          hasPrev={hasPrev}
+          onNext={onNext}
+          onPrev={onPrev}
+          visible={controlsVisible}
+        />
+        {streamName && (
+          <div className="absolute top-4 left-4 text-white/80 text-sm font-medium bg-obsidian/50 px-3 py-1 rounded-lg backdrop-blur-sm">
+            {streamName}
+          </div>
+        )}
+      </div>
+    </FocusContext.Provider>
   );
 }

@@ -6,7 +6,7 @@ import { ContentRail } from '@shared/components/ContentRail';
 import { FocusableCard } from '@shared/components/FocusableCard';
 import { ContinueWatching } from './ContinueWatching';
 import { usePageFocus } from '@shared/hooks/usePageFocus';
-import { useLRUD } from '@shared/hooks/useLRUD';
+import { useSpatialContainer, FocusContext } from '@shared/hooks/useSpatialNav';
 import {
   useLanguageMovieRail,
   useLanguageSeriesRail,
@@ -20,12 +20,9 @@ export function HomePage() {
   const navigate = useNavigate();
   usePageFocus('hero-banner');
 
-  const { ref: contentRef } = useLRUD({
-    id: 'home-content',
-    parent: 'root',
-    orientation: 'vertical',
-    isIndexAlign: true,
-    isFocusable: false,
+  const { ref: contentRef, focusKey } = useSpatialContainer({
+    focusKey: 'home-content',
+    forceFocus: true,
   });
 
   // Data hooks -- Telugu & Hindi movies and series
@@ -81,103 +78,101 @@ export function HomePage() {
 
   return (
     <PageTransition>
-      <div ref={contentRef} className="space-y-8 pb-12">
-        {/* Hero Banner */}
-        {heroItems.length > 0 && (
-          <HeroBanner items={heroItems} parentFocusKey="home-content" />
-        )}
+      <FocusContext.Provider value={focusKey}>
+        <div ref={contentRef} className="space-y-8 pb-12">
+          {/* Hero Banner */}
+          {heroItems.length > 0 && (
+            <HeroBanner items={heroItems} />
+          )}
 
-        {/* Continue Watching */}
-        <ContinueWatching parentFocusKey="home-content" />
+          {/* Continue Watching */}
+          <ContinueWatching />
 
-        {/* Latest Telugu Movies */}
-        <ContentRail
-          title="Latest Telugu Movies"
-          seeAllTo="/language/telugu"
-          isLoading={teluguMoviesLoading}
-          isEmpty={!teluguMovies.length}
-          parentFocusKey="home-content"
-        >
-          {teluguMovies.map((item) => (
-            <FocusableCard
-              key={item.stream_id}
-              focusKey={`vod-${item.stream_id}`}
-              image={item.stream_icon}
-              title={item.name}
-              subtitle={item.rating ? `⭐ ${item.rating}` : undefined}
-              isNew={isNewContent(item.added)}
-              aspectRatio="poster"
-              onClick={() => handleVodClick(item)}
-            />
-          ))}
-        </ContentRail>
+          {/* Latest Telugu Movies */}
+          <ContentRail
+            title="Latest Telugu Movies"
+            seeAllTo="/language/telugu"
+            isLoading={teluguMoviesLoading}
+            isEmpty={!teluguMovies.length}
+          >
+            {teluguMovies.map((item) => (
+              <FocusableCard
+                key={item.stream_id}
+                focusKey={`vod-${item.stream_id}`}
+                image={item.stream_icon}
+                title={item.name}
+                subtitle={item.rating ? `⭐ ${item.rating}` : undefined}
+                isNew={isNewContent(item.added)}
+                aspectRatio="poster"
+                onClick={() => handleVodClick(item)}
+              />
+            ))}
+          </ContentRail>
 
-        {/* Telugu Series */}
-        <ContentRail
-          title="Telugu Series"
-          seeAllTo="/language/telugu"
-          isLoading={teluguSeriesLoading}
-          isEmpty={!teluguSeries.length}
-          parentFocusKey="home-content"
-        >
-          {teluguSeries.map((item) => (
-            <FocusableCard
-              key={item.series_id}
-              focusKey={`series-${item.series_id}`}
-              image={item.cover}
-              title={item.name}
-              subtitle={item.channelName ? `via ${item.channelName}` : (item.genre || undefined)}
-              isNew={isNewContent(item.last_modified)}
-              aspectRatio="poster"
-              onClick={() => handleSeriesClick(item)}
-            />
-          ))}
-        </ContentRail>
+          {/* Telugu Series */}
+          <ContentRail
+            title="Telugu Series"
+            seeAllTo="/language/telugu"
+            isLoading={teluguSeriesLoading}
+            isEmpty={!teluguSeries.length}
+          >
+            {teluguSeries.map((item) => (
+              <FocusableCard
+                key={item.series_id}
+                focusKey={`series-${item.series_id}`}
+                image={item.cover}
+                title={item.name}
+                subtitle={item.channelName ? `via ${item.channelName}` : (item.genre || undefined)}
+                isNew={isNewContent(item.last_modified)}
+                aspectRatio="poster"
+                onClick={() => handleSeriesClick(item)}
+              />
+            ))}
+          </ContentRail>
 
-        {/* Latest Hindi Movies */}
-        <ContentRail
-          title="Latest Hindi Movies"
-          seeAllTo="/language/hindi"
-          isLoading={hindiMoviesLoading}
-          isEmpty={!hindiMovies.length}
-          parentFocusKey="home-content"
-        >
-          {hindiMovies.map((item) => (
-            <FocusableCard
-              key={item.stream_id}
-              focusKey={`vod-${item.stream_id}`}
-              image={item.stream_icon}
-              title={item.name}
-              subtitle={item.rating ? `⭐ ${item.rating}` : undefined}
-              isNew={isNewContent(item.added)}
-              aspectRatio="poster"
-              onClick={() => handleVodClick(item)}
-            />
-          ))}
-        </ContentRail>
+          {/* Latest Hindi Movies */}
+          <ContentRail
+            title="Latest Hindi Movies"
+            seeAllTo="/language/hindi"
+            isLoading={hindiMoviesLoading}
+            isEmpty={!hindiMovies.length}
+          >
+            {hindiMovies.map((item) => (
+              <FocusableCard
+                key={item.stream_id}
+                focusKey={`vod-${item.stream_id}`}
+                image={item.stream_icon}
+                title={item.name}
+                subtitle={item.rating ? `⭐ ${item.rating}` : undefined}
+                isNew={isNewContent(item.added)}
+                aspectRatio="poster"
+                onClick={() => handleVodClick(item)}
+              />
+            ))}
+          </ContentRail>
 
-        {/* Hindi Series */}
-        <ContentRail
-          title="Hindi Series"
-          seeAllTo="/language/hindi"
-          isLoading={hindiSeriesLoading}
-          isEmpty={!hindiSeries.length}
-          parentFocusKey="home-content"
-        >
-          {hindiSeries.map((item) => (
-            <FocusableCard
-              key={item.series_id}
-              focusKey={`series-${item.series_id}`}
-              image={item.cover}
-              title={item.name}
-              subtitle={item.channelName ? `via ${item.channelName}` : (item.genre || undefined)}
-              isNew={isNewContent(item.last_modified)}
-              aspectRatio="poster"
-              onClick={() => handleSeriesClick(item)}
-            />
-          ))}
-        </ContentRail>
-      </div>
+          {/* Hindi Series */}
+          <ContentRail
+            title="Hindi Series"
+            seeAllTo="/language/hindi"
+            isLoading={hindiSeriesLoading}
+            isEmpty={!hindiSeries.length}
+          >
+            {hindiSeries.map((item) => (
+              <FocusableCard
+                key={item.series_id}
+                focusKey={`series-${item.series_id}`}
+                image={item.cover}
+                title={item.name}
+                subtitle={item.channelName ? `via ${item.channelName}` : (item.genre || undefined)}
+                isNew={isNewContent(item.last_modified)}
+                aspectRatio="poster"
+                onClick={() => handleSeriesClick(item)}
+              />
+            ))}
+          </ContentRail>
+        </div>
+      </FocusContext.Provider>
     </PageTransition>
   );
 }

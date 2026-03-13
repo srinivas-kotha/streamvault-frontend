@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useLRUD } from '@shared/hooks/useLRUD';
+import { useSpatialFocusable, useSpatialContainer, FocusContext } from '@shared/hooks/useSpatialNav';
+import { usePageFocus } from '@shared/hooks/usePageFocus';
 import { useSeriesByLanguage, getSupportedLanguages, type SeriesWithChannel } from '../api';
 import { ContentCard } from '@shared/components/ContentCard';
 import { SkeletonGrid } from '@shared/components/Skeleton';
@@ -8,7 +9,6 @@ import { EmptyState } from '@shared/components/EmptyState';
 import { Badge } from '@shared/components/Badge';
 import { useDebounce } from '@shared/hooks/useDebounce';
 import { PageTransition } from '@shared/components/PageTransition';
-import { useUIStore } from '@lib/store';
 
 type SortKey = 'name_asc' | 'name_desc' | 'recent' | 'rating';
 
@@ -19,24 +19,24 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: 'rating', label: 'Rating' },
 ];
 
-function FocusableButton({ id, parent, label, isActive, onSelect, className = '' }: {
+function FocusableButton({ id, label, isActive, onSelect, className = '' }: {
   id: string;
-  parent: string;
   label: string;
   isActive: boolean;
   onSelect: () => void;
   className?: string;
 }) {
-  const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, isFocused, focusProps } = useLRUD({ id, parent, onEnter: onSelect });
-  const showFocus = isFocused && inputMode === 'keyboard';
+  const { ref, showFocusRing, focusProps } = useSpatialFocusable({
+    focusKey: id,
+    onEnterPress: onSelect,
+  });
 
   return (
     <button
       ref={ref}
       {...focusProps}
       onClick={onSelect}
-      className={`${className} ${showFocus && !isActive ? 'ring-2 ring-teal/50' : ''}`}
+      className={`${className} ${showFocusRing && !isActive ? 'ring-2 ring-teal/50' : ''}`}
     >
       {label}
     </button>
@@ -65,6 +65,8 @@ function sortSeries(items: SeriesWithChannel[], sortKey: SortKey): SeriesWithCha
 
 export function SeriesPage() {
   const navigate = useNavigate();
+  usePageFocus('SERIES_PAGE');
+  const { ref: containerRef, focusKey } = useSpatialContainer({ focusKey: 'SERIES_PAGE', forceFocus: true });
   const languages = getSupportedLanguages();
   const [activeLanguage, setActiveLanguage] = useState(languages[0] || 'Telugu');
   const [activeChannel, setActiveChannel] = useState<string | null>(null); // null = All
@@ -105,7 +107,8 @@ export function SeriesPage() {
 
   return (
     <PageTransition>
-      <div className="px-6 lg:px-10 pb-12">
+      <FocusContext.Provider value={focusKey}>
+      <div ref={containerRef} className="px-6 lg:px-10 pb-12">
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <h1 className="font-display text-2xl font-bold text-text-primary">Series</h1>
@@ -119,7 +122,6 @@ export function SeriesPage() {
           {languages.map((lang) => (
             <FocusableButton
               id={`series-lang-${lang}`}
-              parent="root"
               key={lang}
               label={lang}
               isActive={activeLanguage === lang}
@@ -133,7 +135,6 @@ export function SeriesPage() {
           ))}
           <FocusableButton
             id="series-lang-all"
-            parent="root"
             label="All"
             isActive={activeLanguage === 'all'}
             onSelect={() => handleLanguageChange('all')}
@@ -150,7 +151,6 @@ export function SeriesPage() {
           <div className="flex gap-2 mb-5 overflow-x-auto scrollbar-hide pb-1">
             <FocusableButton
               id="series-channel-all"
-              parent="root"
               label={`All (${totalCount})`}
               isActive={activeChannel === null}
               onSelect={() => setActiveChannel(null)}
@@ -163,7 +163,6 @@ export function SeriesPage() {
             {channels.map((ch) => (
               <FocusableButton
                 id={`series-channel-${ch.id}`}
-                parent="root"
                 key={ch.id}
                 label={`${ch.name} (${ch.count})`}
                 isActive={activeChannel === ch.id}
@@ -213,7 +212,6 @@ export function SeriesPage() {
             {SORT_OPTIONS.map((opt) => (
               <FocusableButton
                 id={`series-sort-${opt.key}`}
-                parent="root"
                 key={opt.key}
                 label={opt.label}
                 isActive={sortKey === opt.key}
@@ -283,6 +281,7 @@ export function SeriesPage() {
           </>
         )}
       </div>
+      </FocusContext.Provider>
     </PageTransition>
   );
 }

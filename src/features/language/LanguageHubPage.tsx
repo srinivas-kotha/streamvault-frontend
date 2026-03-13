@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useParams, useNavigate, useSearch } from '@tanstack/react-router';
-import { useLRUD } from '@shared/hooks/useLRUD';
+import { useSpatialFocusable, useSpatialContainer, FocusContext } from '@shared/hooks/useSpatialNav';
+import { usePageFocus } from '@shared/hooks/usePageFocus';
 import { PageTransition } from '@shared/components/PageTransition';
 import { HeroBanner, type HeroItem } from '@shared/components/HeroBanner';
 import { useLanguageMovieRails } from './api';
@@ -8,7 +9,6 @@ import { useSeriesByLanguage } from '@features/series/api';
 import { MoviesTabContent } from './components/MoviesTabContent';
 import { SeriesTabContent } from './components/SeriesTabContent';
 import { LiveTabContent } from './components/LiveTabContent';
-import { useUIStore } from '@lib/store';
 
 type TabKey = 'movies' | 'series' | 'live';
 
@@ -18,16 +18,13 @@ const tabs: { key: TabKey; label: string }[] = [
   { key: 'live', label: 'Live TV' },
 ];
 
-function FocusableTab({ id, parent, label, isActive, onSelect }: {
+function FocusableTab({ id, label, isActive, onSelect }: {
   id: string;
-  parent: string;
   label: string;
   isActive: boolean;
   onSelect: () => void;
 }) {
-  const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, isFocused, focusProps } = useLRUD({ id, parent, onEnter: onSelect });
-  const showFocus = isFocused && inputMode === 'keyboard';
+  const { ref, showFocusRing, focusProps } = useSpatialFocusable({ focusKey: id, onEnterPress: onSelect });
 
   return (
     <button
@@ -39,7 +36,7 @@ function FocusableTab({ id, parent, label, isActive, onSelect }: {
       className={`relative px-5 py-3 text-sm font-medium transition-all min-h-[48px] ${
         isActive
           ? 'text-text-primary'
-          : showFocus
+          : showFocusRing
             ? 'text-text-primary bg-surface-raised/50 ring-2 ring-teal/50 rounded-t-lg'
             : 'text-text-muted hover:text-text-secondary'
       }`}
@@ -56,6 +53,8 @@ export function LanguageHubPage() {
   const { lang } = useParams({ strict: false }) as { lang?: string };
   const language = lang ? lang.charAt(0).toUpperCase() + lang.slice(1) : '';
   const navigate = useNavigate();
+  usePageFocus('LANGUAGE_HUB_PAGE');
+  const { ref: containerRef, focusKey } = useSpatialContainer({ focusKey: 'LANGUAGE_HUB_PAGE', forceFocus: true });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { tab } = useSearch({ from: '/_authenticated/language/$lang' as any });
   const activeTab: TabKey = (tab as TabKey) || 'movies';
@@ -108,7 +107,8 @@ export function LanguageHubPage() {
 
   return (
     <PageTransition>
-      <div className="space-y-6 pb-12">
+      <FocusContext.Provider value={focusKey}>
+      <div ref={containerRef} className="space-y-6 pb-12">
         {/* Hero Banner */}
         {heroItems.length > 0 && <HeroBanner items={heroItems} />}
 
@@ -121,7 +121,6 @@ export function LanguageHubPage() {
             {tabs.map((t) => (
               <FocusableTab
                 id={`langhub-tab-${t.key}`}
-                parent="root"
                 key={t.key}
                 label={t.label}
                 isActive={activeTab === t.key}
@@ -136,6 +135,7 @@ export function LanguageHubPage() {
         {activeTab === 'series' && <SeriesTabContent language={language} />}
         {activeTab === 'live' && <LiveTabContent language={language} lang={lang} />}
       </div>
+      </FocusContext.Provider>
     </PageTransition>
   );
 }
