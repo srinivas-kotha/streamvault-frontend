@@ -25,6 +25,7 @@ export function MiniPlayer() {
   const currentStreamId = usePlayerStore((s) => s.currentStreamId);
   const currentStreamType = usePlayerStore((s) => s.currentStreamType);
   const currentStreamName = usePlayerStore((s) => s.currentStreamName);
+  const startTime = usePlayerStore((s) => s.startTime);
   const isMiniPlayer = usePlayerStore((s) => s.isMiniPlayer);
   const stop = usePlayerStore((s) => s.stop);
 
@@ -37,6 +38,7 @@ export function MiniPlayer() {
         streamType={currentStreamType}
         streamId={currentStreamId}
         streamName={currentStreamName || undefined}
+        startTime={startTime}
         onClose={stop}
       />
     </div>

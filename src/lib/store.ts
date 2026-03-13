@@ -44,6 +44,7 @@ interface PlayerState {
   currentStreamId: string | null;
   currentStreamType: StreamType | null;
   currentStreamName: string | null;
+  startTime: number;
   isPlaying: boolean;
   isMiniPlayer: boolean;
   volume: number;
@@ -53,8 +54,8 @@ interface PlayerState {
   seasonNumber: number | null;
   episodeIndex: number | null;
   // Actions
-  playStream: (id: string, type: StreamType, name: string) => void;
-  playSeries: (id: string, type: StreamType, name: string, seriesId: string, season: number, epIndex: number) => void;
+  playStream: (id: string, type: StreamType, name: string, startTime?: number) => void;
+  playSeries: (id: string, type: StreamType, name: string, seriesId: string, season: number, epIndex: number, startTime?: number) => void;
   stop: () => void;
   togglePlay: () => void;
   toggleMiniPlayer: () => void;
@@ -67,6 +68,7 @@ export const usePlayerStore = create<PlayerState>((set) => ({
   currentStreamId: null,
   currentStreamType: null,
   currentStreamName: null,
+  startTime: 0,
   isPlaying: false,
   isMiniPlayer: false,
   volume: 1,
@@ -74,12 +76,13 @@ export const usePlayerStore = create<PlayerState>((set) => ({
   seriesId: null,
   seasonNumber: null,
   episodeIndex: null,
-  playStream: (id, type, name) => {
+  playStream: (id, type, name, startTime = 0) => {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
     set({
       currentStreamId: id,
       currentStreamType: type,
       currentStreamName: name,
+      startTime,
       isPlaying: true,
       isMiniPlayer: !isStandalone,
       seriesId: null,
@@ -87,12 +90,13 @@ export const usePlayerStore = create<PlayerState>((set) => ({
       episodeIndex: null,
     });
   },
-  playSeries: (id, type, name, seriesId, season, epIndex) => {
+  playSeries: (id, type, name, seriesId, season, epIndex, startTime = 0) => {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
     set({
       currentStreamId: id,
       currentStreamType: type,
       currentStreamName: name,
+      startTime,
       isPlaying: true,
       isMiniPlayer: !isStandalone,
       seriesId,
@@ -105,6 +109,7 @@ export const usePlayerStore = create<PlayerState>((set) => ({
       currentStreamId: null,
       currentStreamType: null,
       currentStreamName: null,
+      startTime: 0,
       isPlaying: false,
       isMiniPlayer: false,
       seriesId: null,

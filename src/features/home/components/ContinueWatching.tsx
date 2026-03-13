@@ -1,8 +1,14 @@
 import { useWatchHistory } from '../api';
 import { useNavigate } from '@tanstack/react-router';
-import { usePlayerStore } from '@lib/store';
+import { usePlayerStore, type StreamType } from '@lib/store';
 import { ContentRail } from '@shared/components/ContentRail';
 import { FocusableCard } from '@shared/components/FocusableCard';
+
+const contentTypeToStreamType: Record<string, StreamType> = {
+  channel: 'live',
+  vod: 'vod',
+  series: 'series',
+};
 
 export function ContinueWatching() {
   const { data: history, isLoading } = useWatchHistory();
@@ -18,13 +24,21 @@ export function ContinueWatching() {
   if (!isLoading && inProgress.length === 0) return null;
 
   const handleClick = (item: (typeof inProgress)[0]) => {
+    const streamType = contentTypeToStreamType[item.content_type];
+    if (!streamType) return;
+
     if (item.content_type === 'channel') {
+      // Live channels: navigate to live page (no resume)
       playStream(String(item.content_id), 'live', item.content_name ?? 'Unknown');
       navigate({ to: '/live', search: { play: String(item.content_id) } });
-    } else if (item.content_type === 'vod') {
-      navigate({ to: '/vod/$vodId', params: { vodId: String(item.content_id) } });
-    } else if (item.content_type === 'series') {
-      navigate({ to: '/series/$seriesId', params: { seriesId: String(item.content_id) } });
+    } else {
+      // VOD & Series: play directly with resume position — no Xtream API call needed
+      playStream(
+        String(item.content_id),
+        streamType,
+        item.content_name ?? 'Unknown',
+        item.progress_seconds,
+      );
     }
   };
 
