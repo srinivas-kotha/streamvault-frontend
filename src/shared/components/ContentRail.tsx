@@ -67,7 +67,7 @@ export function ContentRail({
   return (
     <FocusContext.Provider value={focusKey}>
       <section ref={ref} className={`${className}`}>
-        <div className="flex items-center justify-between mb-3 px-6 lg:px-10">
+        <div className="flex items-center justify-between mb-1.5 px-6 lg:px-10">
           <h2 className="font-display text-lg lg:text-xl font-semibold text-text-primary">
             {title}
           </h2>

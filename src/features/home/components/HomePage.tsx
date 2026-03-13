@@ -1,7 +1,5 @@
-import { useMemo } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { PageTransition } from '@shared/components/PageTransition';
-import { HeroBanner, type HeroItem } from '@shared/components/HeroBanner';
 import { ContentRail } from '@shared/components/ContentRail';
 import { FocusableCard } from '@shared/components/FocusableCard';
 import { ContinueWatching } from './ContinueWatching';
@@ -18,7 +16,7 @@ import type { XtreamVODStream } from '@shared/types/api';
 
 export function HomePage() {
   const navigate = useNavigate();
-  usePageFocus('hero-banner');
+  usePageFocus('home-content');
 
   const { ref: contentRef, focusKey } = useSpatialContainer({
     focusKey: 'home-content',
@@ -31,43 +29,6 @@ export function HomePage() {
   const { items: hindiMovies, isLoading: hindiMoviesLoading } = useLanguageMovieRail('Hindi');
   const { items: hindiSeries, isLoading: hindiSeriesLoading } = useLanguageSeriesRail('Hindi');
 
-  // Hero banner: top 5 from Telugu movies + Telugu series (mixed)
-  const heroItems = useMemo<HeroItem[]>(() => {
-    const items: HeroItem[] = [];
-
-    // Add top Telugu movies
-    for (const m of teluguMovies.slice(0, 3)) {
-      if (m.stream_icon) {
-        items.push({
-          id: m.stream_id,
-          type: 'vod',
-          title: m.name,
-          image: m.stream_icon,
-          rating: m.rating || undefined,
-        });
-      }
-    }
-
-    // Add top Telugu series
-    for (const s of teluguSeries.slice(0, 2)) {
-      const backdrop = s.backdrop_path?.[0] || s.cover;
-      if (backdrop) {
-        items.push({
-          id: s.series_id,
-          type: 'series',
-          title: s.name,
-          description: s.plot || undefined,
-          image: backdrop,
-          rating: s.rating || undefined,
-          genre: s.genre || undefined,
-          year: s.releaseDate?.slice(0, 4) || undefined,
-        });
-      }
-    }
-
-    return items.slice(0, 5);
-  }, [teluguMovies, teluguSeries]);
-
   const handleVodClick = (item: XtreamVODStream) => {
     navigate({ to: '/vod/$vodId', params: { vodId: String(item.stream_id) } });
   };
@@ -79,12 +40,7 @@ export function HomePage() {
   return (
     <PageTransition>
       <FocusContext.Provider value={focusKey}>
-        <div ref={contentRef} className="space-y-8 pb-12">
-          {/* Hero Banner */}
-          {heroItems.length > 0 && (
-            <HeroBanner items={heroItems} />
-          )}
-
+        <div ref={contentRef} className="space-y-4 pt-4 pb-12">
           {/* Continue Watching */}
           <ContinueWatching />
 
