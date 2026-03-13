@@ -176,6 +176,13 @@ export function PlayerPage({
       className="relative aspect-video bg-black rounded-xl overflow-hidden focus:outline-none"
       onMouseMove={showControls}
       onMouseLeave={() => isPlaying && setControlsVisible(false)}
+      onClick={() => {
+        if (controlsVisible) {
+          setControlsVisible(false);
+        } else {
+          showControls();
+        }
+      }}
     >
       <VideoPlayer
         ref={playerRef}

@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useMemo } from 'react';
 import type { QualityLevel, VideoPlayerHandle } from './VideoPlayer';
+import type React from 'react';
 import { formatDuration } from '@shared/utils/formatDuration';
 import { useUIStore, usePlayerStore } from '@lib/store';
 import { useLRUD } from '@shared/hooks/useLRUD';
@@ -74,10 +75,13 @@ function FocusableVolumeSlider({ volume, isMuted, onVolumeChange }: {
   );
 }
 
-function FocusableProgressBar({ progressRef, progress, onSeek }: {
+function FocusableProgressBar({ progressRef, progress, onSeek, playerRef, duration, isLive }: {
   progressRef: React.RefObject<HTMLDivElement | null>;
   progress: number;
   onSeek: (e: React.MouseEvent<HTMLDivElement>) => void;
+  playerRef: React.RefObject<VideoPlayerHandle | null>;
+  duration: number;
+  isLive: boolean;
 }) {
   const inputMode = useUIStore((s) => s.inputMode);
   const { ref, isFocused, focusProps } = useLRUD({
@@ -85,17 +89,25 @@ function FocusableProgressBar({ progressRef, progress, onSeek }: {
     parent: 'player-controls',
   });
 
-  // Note: D-pad left/right seek while focused on progress bar is typically
-  // handled globally via usePlayerKeyboard rather than at the element level in LRUD.
-  
   const showFocus = isFocused && inputMode === 'keyboard';
+
+  const handleTouchSeek = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    if (!progressRef.current || isLive || !duration) return;
+    const rect = progressRef.current.getBoundingClientRect();
+    const touch = e.touches[0] || e.changedTouches[0];
+    if (!touch) return;
+    const pct = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width));
+    playerRef.current?.seek(pct * duration);
+  }, [progressRef, playerRef, duration, isLive]);
 
   return (
     <div ref={ref} {...focusProps} className="px-4 mb-1">
       <div
         ref={progressRef}
         onClick={onSeek}
-        className={`w-full h-1.5 bg-white/20 cursor-pointer group/progress hover:h-3 transition-all rounded-full ${showFocus ? 'h-3 ring-2 ring-teal/60' : ''}`}
+        onTouchStart={handleTouchSeek}
+        onTouchMove={handleTouchSeek}
+        className={`w-full h-1.5 bg-white/20 cursor-pointer group/progress hover:h-3 transition-all rounded-full touch-none ${showFocus ? 'h-3 ring-2 ring-teal/60' : ''}`}
       >
         <div className="h-full bg-teal rounded-full relative" style={{ width: `${progress}%` }}>
           <div className={`absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-teal rounded-full transition-opacity ${showFocus ? 'opacity-100' : 'opacity-0 group-hover/progress:opacity-100'}`} />
@@ -173,6 +185,9 @@ export function PlayerControls({
           progressRef={progressRef}
           progress={progress}
           onSeek={handleSeek}
+          playerRef={playerRef}
+          duration={duration}
+          isLive={isLive}
         />
       )}
 

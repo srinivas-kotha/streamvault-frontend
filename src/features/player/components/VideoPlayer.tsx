@@ -67,12 +67,6 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
           mozCancelFullScreen?: () => void;
           msExitFullscreen?: () => void;
         };
-        const el = containerRef.current as (HTMLDivElement & {
-          webkitRequestFullscreen?: () => void;
-          mozRequestFullScreen?: () => void;
-          msRequestFullscreen?: () => void;
-        }) | null;
-        if (!el) return;
 
         const isFullscreen = doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement;
 
@@ -81,12 +75,25 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
           else if (doc.webkitExitFullscreen) doc.webkitExitFullscreen();
           else if (doc.mozCancelFullScreen) doc.mozCancelFullScreen();
           else if (doc.msExitFullscreen) doc.msExitFullscreen();
-        } else {
-          if (el.requestFullscreen) el.requestFullscreen();
-          else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-          else if (el.mozRequestFullScreen) el.mozRequestFullScreen();
-          else if (el.msRequestFullscreen) el.msRequestFullscreen();
+          return;
         }
+
+        // Try container fullscreen first (shows controls overlay), fall back to video element (iOS)
+        const el = containerRef.current as (HTMLDivElement & {
+          webkitRequestFullscreen?: () => void;
+          mozRequestFullScreen?: () => void;
+          msRequestFullscreen?: () => void;
+        }) | null;
+
+        const video = videoRef.current as (HTMLVideoElement & {
+          webkitEnterFullscreen?: () => void;
+        }) | null;
+
+        if (el?.requestFullscreen) el.requestFullscreen().catch(() => { video?.webkitEnterFullscreen?.(); });
+        else if (el?.webkitRequestFullscreen) el.webkitRequestFullscreen();
+        else if (el?.mozRequestFullScreen) el.mozRequestFullScreen();
+        else if (el?.msRequestFullscreen) el.msRequestFullscreen();
+        else if (video?.webkitEnterFullscreen) video.webkitEnterFullscreen(); // iOS Safari fallback
       },
       togglePiP: async () => {
         const video = videoRef.current;
