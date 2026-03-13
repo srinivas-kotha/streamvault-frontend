@@ -1,15 +1,16 @@
-import { useRef, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { useRef, useState, useEffect, useCallback, useId, type ReactNode } from 'react';
 import { useUIStore } from '@lib/store';
 import { useLRUD } from '@shared/hooks/useLRUD';
 
-function FocusableScrollArrow({ direction, onClick, arrowOpacity }: {
+function FocusableScrollArrow({ direction, onClick, arrowOpacity, instanceId }: {
   direction: 'left' | 'right';
   onClick: () => void;
   arrowOpacity: string;
+  instanceId: string;
 }) {
   const inputMode = useUIStore((s) => s.inputMode);
   const { ref, isFocused, focusProps } = useLRUD({
-    id: `scroll-arrow-${direction}`,
+    id: `scroll-arrow-${direction}-${instanceId}`,
     parent: 'root',
     onEnter: onClick,
   });
@@ -36,6 +37,7 @@ interface HorizontalScrollProps {
 }
 
 export function HorizontalScroll({ children, className = '' }: HorizontalScrollProps) {
+  const instanceId = useId();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -82,7 +84,7 @@ export function HorizontalScroll({ children, className = '' }: HorizontalScrollP
     <div className={`group/scroll relative ${className}`}>
       {/* Left arrow */}
       {canScrollLeft && (
-        <FocusableScrollArrow direction="left" onClick={() => scroll('left')} arrowOpacity={arrowOpacity} />
+        <FocusableScrollArrow direction="left" onClick={() => scroll('left')} arrowOpacity={arrowOpacity} instanceId={instanceId} />
       )}
 
       {/* Scrollable area */}
@@ -95,7 +97,7 @@ export function HorizontalScroll({ children, className = '' }: HorizontalScrollP
 
       {/* Right arrow */}
       {canScrollRight && (
-        <FocusableScrollArrow direction="right" onClick={() => scroll('right')} arrowOpacity={arrowOpacity} />
+        <FocusableScrollArrow direction="right" onClick={() => scroll('right')} arrowOpacity={arrowOpacity} instanceId={instanceId} />
       )}
     </div>
   );
