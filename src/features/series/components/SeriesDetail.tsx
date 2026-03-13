@@ -491,7 +491,8 @@ export function SeriesDetail() {
 
   const { ref: contentRef, focusKey: contentFocusKey } = useSpatialContainer({
     focusKey: `series-content-${seriesId}`,
-    focusable: false,
+    focusable: true,
+    saveLastFocusedChild: true,
   });
 
   const { ref: actionsRef, focusKey: actionsFocusKey } = useSpatialContainer({
@@ -517,17 +518,18 @@ export function SeriesDetail() {
     onEnterPress: () => navigate({ to: '/series' }),
   });
 
-  // Auto-focus: resume button if exists, otherwise first season tab, then back button
+  // Auto-focus: resume button if exists, otherwise first season tab, then back button, then content container
   useEffect(() => {
     if (!isLoading && data) {
       const timer = setTimeout(() => {
         try { setFocus(`series-resume-${seriesId}`); return; } catch { /* not mounted */ }
-        // Try first season tab
         if (computedSeasons.length > 0 && computedSeasons[0]) {
           try { setFocus(`series-season-${computedSeasons[0].season_number}`); return; } catch { /* noop */ }
         }
-        try { setFocus(`series-back-${seriesId}`); } catch { /* noop */ }
-      }, 150);
+        try { setFocus(`series-back-${seriesId}`); return; } catch { /* noop */ }
+        // Final fallback: focus the content container itself
+        try { setFocus(`series-content-${seriesId}`); } catch { /* noop */ }
+      }, 200);
       return () => clearTimeout(timer);
     }
   }, [isLoading, data, seriesId, computedSeasons]);

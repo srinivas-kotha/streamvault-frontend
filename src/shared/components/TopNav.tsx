@@ -1,38 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useMatchRoute, useNavigate } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { useSpatialFocusable, useSpatialContainer, FocusContext, setFocus } from '@shared/hooks/useSpatialNav';
 import { useAuthStore } from '@lib/store';
 import { useLogout } from '@features/auth/hooks/useAuth';
-import { useLiveCategories } from '@features/live/api';
-import { useVODCategories } from '@features/vod/api';
-import { useSeriesCategories } from '@features/series/api';
-import { getDetectedLanguages } from '@shared/utils/categoryParser';
 import { isTVMode } from '@shared/utils/isTVMode';
 
 export function TopNav() {
   const username = useAuthStore((s) => s.username);
   const logoutMutation = useLogout();
-  const matchRoute = useMatchRoute();
   const [scrolled, setScrolled] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
   // Register the top-nav spatial container — focusable: false so individual
-  // NavItems are direct smartNavigate candidates (containers block Up navigation)
+  // items are direct smartNavigate candidates (containers block Up navigation)
   const { ref: topNavRef, focusKey: topNavFocusKey } = useSpatialContainer({
     focusKey: 'top-nav',
     focusable: false,
   });
-
-  // Detect languages from categories
-  const { data: liveCategories } = useLiveCategories();
-  const { data: vodCategories } = useVODCategories();
-  const { data: seriesCategories } = useSeriesCategories();
-
-  const languages = getDetectedLanguages(
-    liveCategories ?? [],
-    vodCategories ?? [],
-    seriesCategories ?? []
-  );
 
   // Track scroll position for transparency
   useEffect(() => {
@@ -43,18 +27,14 @@ export function TopNav() {
     return () => main.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
   // Close profile dropdown on outside click or Escape key
   useEffect(() => {
     const handleClick = () => {
       setProfileOpen(false);
-      setMobileMenuOpen(false);
     };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setProfileOpen(false);
-        setMobileMenuOpen(false);
       }
     };
     window.addEventListener('click', handleClick);
@@ -65,16 +45,15 @@ export function TopNav() {
     };
   }, []);
 
-  // TV mode: full nav header with Home, language links, Search, and profile
+  // TV mode: logo + profile only
   if (isTVMode) {
     return (
       <FocusContext.Provider value={topNavFocusKey}>
         <header ref={topNavRef} className="fixed top-0 left-0 right-0 z-50 bg-obsidian/95 backdrop-blur-sm">
-          <nav className="flex items-center h-12 px-4 lg:px-10 gap-2">
+          <nav className="flex items-center justify-between h-12 px-4 lg:px-10">
             <Link to="/" className="font-display text-lg font-bold text-text-primary flex-shrink-0">
               Stream<span className="text-teal">Vault</span>
             </Link>
-            <TopNavFocusGroup languages={languages.slice(0, 9)} matchRoute={matchRoute} />
             <ProfileMenu
               username={username}
               profileOpen={profileOpen}
@@ -92,169 +71,30 @@ export function TopNav() {
       <header
         ref={topNavRef}
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          scrolled || mobileMenuOpen
+          scrolled
             ? 'bg-obsidian/90 backdrop-blur-xl border-b border-border-subtle shadow-lg'
             : 'bg-gradient-to-b from-obsidian/80 to-transparent'
         }`}
       >
         <nav className="flex items-center justify-between h-16 px-4 lg:px-10">
-          <div className="flex items-center">
-            {/* Hamburger Menu Button (Mobile Only) */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setMobileMenuOpen(!mobileMenuOpen);
-                setProfileOpen(false);
-              }}
-              className="md:hidden p-2 mr-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-raised/50 transition-colors"
-            >
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                {mobileMenuOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                )}
-              </svg>
-            </button>
-
-            {/* Logo */}
-            <Link
-              to="/"
-              className="font-display text-xl font-bold text-text-primary hover:text-teal transition-colors mr-8 flex-shrink-0"
-            >
-              Stream<span className="text-teal">Vault</span>
-            </Link>
-          </div>
-
-          {/* Desktop Nav Items */}
-          <div className="hidden md:flex flex-1 items-center overflow-x-auto scrollbar-hide">
-            <TopNavFocusGroup languages={languages.slice(0, 9)} matchRoute={matchRoute} />
-          </div>
+          {/* Logo */}
+          <Link
+            to="/"
+            className="font-display text-xl font-bold text-text-primary hover:text-teal transition-colors flex-shrink-0"
+          >
+            Stream<span className="text-teal">Vault</span>
+          </Link>
 
           {/* Profile */}
-          <div className="flex items-center">
-            {/* Search Icon (Mobile Only) */}
-            <Link
-              to="/search"
-              className="md:hidden p-2 mr-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-raised/50 transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </Link>
-
-            <ProfileMenu
-              username={username}
-              profileOpen={profileOpen}
-              setProfileOpen={(v) => {
-                setProfileOpen(v);
-                if (v) setMobileMenuOpen(false);
-              }}
-              onLogout={() => logoutMutation.mutate()}
-            />
-          </div>
+          <ProfileMenu
+            username={username}
+            profileOpen={profileOpen}
+            setProfileOpen={setProfileOpen}
+            onLogout={() => logoutMutation.mutate()}
+          />
         </nav>
-
-        {/* Mobile Menu Dropdown (touch-only, no spatial nav) */}
-        <div
-          className={`md:hidden fixed top-16 left-0 right-0 bg-surface-raised border-b border-border shadow-xl px-4 py-4 space-y-2 overflow-y-auto transition-transform origin-top duration-300 ${
-            mobileMenuOpen ? 'scale-y-100 opacity-100' : 'scale-y-0 opacity-0 pointer-events-none'
-          }`}
-          style={{ maxHeight: 'calc(100vh - 64px)' }}
-        >
-          <MobileNavLinks languages={languages} matchRoute={matchRoute} />
-        </div>
       </header>
     </FocusContext.Provider>
-  );
-}
-
-interface NavItemProps {
-  to: string;
-  label: string;
-  isActive: boolean;
-  icon?: React.ReactNode;
-}
-
-function NavItem({ to, label, isActive, icon }: NavItemProps) {
-  const navigate = useNavigate();
-
-  const { ref, showFocusRing, focusProps } = useSpatialFocusable({
-    focusKey: `nav-item-${to}`,
-    onEnterPress: () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      navigate({ to: to as any });
-    },
-  });
-
-  return (
-    <Link
-      ref={ref}
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      to={to as any}
-      {...focusProps}
-      className={`relative flex items-center gap-1.5 px-4 py-3 rounded-lg text-sm font-medium whitespace-nowrap min-h-[48px] transition-all ${
-        isActive
-          ? 'text-text-primary'
-          : showFocusRing
-            ? 'text-text-primary bg-surface-raised/50 ring-2 ring-teal/50'
-            : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised/30'
-      }`}
-    >
-      {icon}
-      {label}
-      {isActive && (
-        <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-gradient-to-r from-teal to-indigo rounded-full" />
-      )}
-    </Link>
-  );
-}
-
-function TopNavFocusGroup({ languages, matchRoute }: { languages: string[]; matchRoute: ReturnType<typeof useMatchRoute> }) {
-  const { ref: groupRef, focusKey } = useSpatialContainer({
-    focusKey: 'top-nav-items',
-    focusable: false,
-  });
-
-  return (
-    <FocusContext.Provider value={focusKey}>
-      <div ref={groupRef} className="flex items-center gap-1 overflow-x-auto scrollbar-hide flex-1">
-        {languages.map((lang) => (
-          <NavItem
-            key={lang}
-            to={`/language/${lang.toLowerCase()}`}
-            label={lang}
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            isActive={!!matchRoute({ to: `/language/${lang.toLowerCase()}` as any, fuzzy: true })}
-          />
-        ))}
-        <NavItem to="/search" label="Search" isActive={!!matchRoute({ to: '/search', fuzzy: true })} icon={
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        } />
-      </div>
-    </FocusContext.Provider>
-  );
-}
-
-/** Mobile dropdown nav — plain Links, no spatial nav (touch-only) */
-function MobileNavLinks({ languages, matchRoute }: { languages: string[]; matchRoute: ReturnType<typeof useMatchRoute> }) {
-  return (
-    <div className="flex flex-col gap-2">
-      {languages.map((lang) => (
-        <Link
-          key={lang}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          to={`/language/${lang.toLowerCase()}` as any}
-          className={`px-4 py-3 rounded-lg text-sm font-medium ${
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            matchRoute({ to: `/language/${lang.toLowerCase()}` as any, fuzzy: true }) ? 'text-text-primary' : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised/30'
-          }`}
-        >{lang}</Link>
-      ))}
-      <Link to="/search" className={`px-4 py-3 rounded-lg text-sm font-medium ${matchRoute({ to: '/search', fuzzy: true }) ? 'text-text-primary' : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised/30'}`}>Search</Link>
-    </div>
   );
 }
 
