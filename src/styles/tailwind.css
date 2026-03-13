@@ -115,24 +115,24 @@
   line-height: 1.1;
 }
 
-/* Content rail item sizing */
+/* Content rail item sizing — compact for TV (8-10 cards per row at 1920px) */
 .rail-item {
-  min-width: 160px;
-  max-width: 200px;
+  min-width: 120px;
+  max-width: 140px;
   scroll-snap-align: start;
 }
 
 @media (min-width: 1536px) {
   .rail-item {
-    min-width: 200px;
-    max-width: 240px;
+    min-width: 130px;
+    max-width: 150px;
   }
 }
 
 @media (min-width: 1920px) {
   .rail-item {
-    min-width: 220px;
-    max-width: 260px;
+    min-width: 140px;
+    max-width: 160px;
   }
 
   .tv-safe-zone {

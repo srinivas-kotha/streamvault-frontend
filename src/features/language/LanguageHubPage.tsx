@@ -1,11 +1,7 @@
-import { useMemo } from 'react';
 import { useParams, useNavigate, useSearch } from '@tanstack/react-router';
 import { useSpatialFocusable, useSpatialContainer, FocusContext } from '@shared/hooks/useSpatialNav';
 import { usePageFocus } from '@shared/hooks/usePageFocus';
 import { PageTransition } from '@shared/components/PageTransition';
-import { HeroBanner, type HeroItem } from '@shared/components/HeroBanner';
-import { useLanguageMovieRails } from './api';
-import { useSeriesByLanguage } from '@features/series/api';
 import { MoviesTabContent } from './components/MoviesTabContent';
 import { SeriesTabContent } from './components/SeriesTabContent';
 import { LiveTabContent } from './components/LiveTabContent';
@@ -65,35 +61,6 @@ export function LanguageHubPage() {
     });
   };
 
-  // Data for hero banner only
-  const { rails: movieRails } = useLanguageMovieRails(language);
-  const { allSeries } = useSeriesByLanguage(language);
-
-  // Hero items from top movies or series
-  const heroItems = useMemo<HeroItem[]>(() => {
-    if (activeTab === 'movies' && movieRails.length > 0) {
-      return (movieRails[0]?.items ?? []).slice(0, 5).map((m) => ({
-        id: m.stream_id,
-        type: 'vod' as const,
-        title: m.name,
-        image: m.stream_icon,
-        rating: m.rating || undefined,
-      }));
-    }
-    if (activeTab === 'series' && allSeries.length > 0) {
-      return allSeries.slice(0, 5).map((s) => ({
-        id: s.series_id,
-        type: 'series' as const,
-        title: s.name,
-        description: s.plot || undefined,
-        image: s.backdrop_path?.[0] || s.cover,
-        rating: s.rating || undefined,
-        genre: s.genre || undefined,
-      }));
-    }
-    return [];
-  }, [activeTab, movieRails, allSeries]);
-
   if (!lang) {
     return (
       <PageTransition>
@@ -108,10 +75,7 @@ export function LanguageHubPage() {
   return (
     <PageTransition>
       <FocusContext.Provider value={focusKey}>
-      <div ref={containerRef} className="space-y-6 pb-12">
-        {/* Hero Banner */}
-        {heroItems.length > 0 && <HeroBanner items={heroItems} />}
-
+      <div ref={containerRef} className="space-y-4 pb-12">
         {/* Content Tabs */}
         <div className="px-6 lg:px-10 relative z-10">
           <div

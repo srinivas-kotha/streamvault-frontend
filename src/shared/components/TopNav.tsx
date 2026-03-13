@@ -7,6 +7,7 @@ import { useLiveCategories } from '@features/live/api';
 import { useVODCategories } from '@features/vod/api';
 import { useSeriesCategories } from '@features/series/api';
 import { getDetectedLanguages } from '@shared/utils/categoryParser';
+import { isTVMode } from '@shared/utils/isTVMode';
 
 export function TopNav() {
   const username = useAuthStore((s) => s.username);
@@ -61,6 +62,27 @@ export function TopNav() {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
+
+  // TV mode: minimal header with just logo + profile button
+  if (isTVMode) {
+    return (
+      <FocusContext.Provider value={topNavFocusKey}>
+        <header ref={topNavRef} className="fixed top-0 left-0 right-0 z-50 bg-obsidian/95 backdrop-blur-sm">
+          <nav className="flex items-center justify-between h-12 px-4 lg:px-10">
+            <Link to="/" className="font-display text-lg font-bold text-text-primary">
+              Stream<span className="text-teal">Vault</span>
+            </Link>
+            <ProfileMenu
+              username={username}
+              profileOpen={profileOpen}
+              setProfileOpen={setProfileOpen}
+              onLogout={() => logoutMutation.mutate()}
+            />
+          </nav>
+        </header>
+      </FocusContext.Provider>
+    );
+  }
 
   return (
     <FocusContext.Provider value={topNavFocusKey}>

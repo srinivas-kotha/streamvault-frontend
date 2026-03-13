@@ -82,7 +82,7 @@ export function ContentCard({
       onClick={onClick}
       className={`group relative cursor-pointer rounded-lg overflow-hidden bg-surface-raised border transition-all duration-200 ambient-glow ${
         showFocusRing
-          ? 'border-teal scale-[1.05] z-10 ring-2 ring-teal/60 ring-offset-2 ring-offset-obsidian shadow-[0_0_24px_rgba(45,212,191,0.3)]'
+          ? 'border-teal scale-[1.08] z-10 ring-2 ring-teal/60 ring-offset-2 ring-offset-obsidian shadow-[0_0_24px_rgba(45,212,191,0.3)]'
           : 'border-border-subtle hover:border-teal/30 hover:scale-[1.03]'
       }`}
     >
@@ -120,10 +120,10 @@ export function ContentCard({
       </div>
 
       {/* Text */}
-      <div className="p-3">
-        <h3 className="text-sm font-medium text-text-primary truncate">{title}</h3>
+      <div className="p-1.5">
+        <h3 className="text-xs font-medium text-text-primary truncate">{title}</h3>
         {subtitle && (
-          <p className="text-xs text-text-muted mt-0.5 truncate">{subtitle}</p>
+          <p className="text-[10px] text-text-muted mt-0.5 truncate">{subtitle}</p>
         )}
       </div>
     </div>
