@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useFocusable } from '@noriginmedia/norigin-spatial-navigation';
+import { useLRUD } from '@shared/hooks/useLRUD';
 import { useEPG } from '../api';
 import type { XtreamLiveStream } from '@shared/types/api';
 import { Badge } from '@shared/components/Badge';
@@ -26,18 +26,18 @@ export function ChannelCard({ channel }: ChannelCardProps) {
     navigate({ to: '/live', search: { play: String(channel.stream_id) } });
   }, [channel, playStream, navigate]);
 
-  const { ref, focused } = useFocusable({
-    onEnterPress: handlePlay,
-    onFocus: ({ node }) => {
-      node?.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
-    },
+  const { ref, isFocused, focusProps } = useLRUD({
+    id: `channel-${channel.stream_id}`,
+    parent: 'root',
+    onEnter: handlePlay,
   });
 
-  const showFocusRing = focused && inputMode === 'keyboard';
+  const showFocusRing = isFocused && inputMode === 'keyboard';
 
   return (
     <div
       ref={ref}
+      {...focusProps}
       onClick={handlePlay}
       className={`group cursor-pointer rounded-lg overflow-hidden bg-surface-raised border transition-all duration-200 ${
         showFocusRing

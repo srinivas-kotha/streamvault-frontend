@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { setFocus } from '@noriginmedia/norigin-spatial-navigation';
+import { lrud } from '@shared/providers/LRUDProvider';
 import { useUIStore } from '@lib/store';
 
 /**
@@ -13,7 +13,7 @@ export function usePageFocus(focusKey: string, delay = 100) {
     if (inputMode !== 'keyboard') return;
 
     const timer = setTimeout(() => {
-      try { setFocus(focusKey); } catch { /* focusKey may not be registered yet */ }
+      try { lrud.assignFocus(focusKey); } catch { /* focusKey may not be registered yet */ }
     }, delay);
 
     return () => clearTimeout(timer);

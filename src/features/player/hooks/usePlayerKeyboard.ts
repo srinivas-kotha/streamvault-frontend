@@ -29,9 +29,25 @@ export function usePlayerKeyboard({
       const video = playerRef.current?.getVideo();
       if (!video) return;
 
-      // For arrow keys: only handle if no specific UI control is focused.
-      // This lets spatial navigation work for D-pad users navigating player controls.
-      // When focus is on body, video, or the player container, arrows control playback.
+      // Handle Enter (Play/Pause) directly if navigating generic UI
+      if (e.key === 'Enter') {
+        const active = document.activeElement;
+        const isGenericFocus =
+          !active ||
+          active === document.body ||
+          active === video ||
+          active.tagName === 'VIDEO';
+        if (isGenericFocus) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (video.paused) playerRef.current?.play();
+          else playerRef.current?.pause();
+          return;
+        }
+      }
+
+      // We want to override Up/Down/Left/Right only if LRUD isn't focused on a specific control
+      // (like a quality selector or play/pause button).
       const isArrowKey = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key);
       if (isArrowKey) {
         const active = document.activeElement;
@@ -40,7 +56,31 @@ export function usePlayerKeyboard({
           active === document.body ||
           active === video ||
           active.tagName === 'VIDEO';
-        if (!isGenericFocus) return; // Let spatial nav handle it
+        
+        // If they are specifically focused on a control button, we let LRUD take the arrow keys
+        // to move focus around the controls.
+        if (!isGenericFocus) return; 
+
+        // Otherwise, stop propagation to prevent LRUD from catching it 
+        // and handle it natively for the video player.
+        e.stopPropagation();
+        e.preventDefault();
+        
+        switch (e.key) {
+          case 'ArrowLeft':
+            if (!isLive) playerRef.current?.seek(Math.max(0, video.currentTime - 10));
+            break;
+          case 'ArrowRight':
+            if (!isLive) playerRef.current?.seek(video.currentTime + 10);
+            break;
+          case 'ArrowUp':
+            onVolumeUp();
+            break;
+          case 'ArrowDown':
+            onVolumeDown();
+            break;
+        }
+        return;
       }
 
       switch (e.key) {
@@ -58,22 +98,6 @@ export function usePlayerKeyboard({
           e.preventDefault();
           onMuteToggle();
           break;
-        case 'ArrowLeft':
-          e.preventDefault();
-          if (!isLive) playerRef.current?.seek(Math.max(0, video.currentTime - 10));
-          break;
-        case 'ArrowRight':
-          e.preventDefault();
-          if (!isLive) playerRef.current?.seek(video.currentTime + 10);
-          break;
-        case 'ArrowUp':
-          e.preventDefault();
-          onVolumeUp();
-          break;
-        case 'ArrowDown':
-          e.preventDefault();
-          onVolumeDown();
-          break;
         case 'n':
           if (onNext) { e.preventDefault(); onNext(); }
           break;
@@ -82,7 +106,9 @@ export function usePlayerKeyboard({
           break;
         case 'Backspace':
         case 'Escape':
+        case 'GoBack': // Samsung TV Back Key
           e.preventDefault();
+          e.stopPropagation();
           if (document.fullscreenElement) {
             document.exitFullscreen();
           } else if (onClose) {
@@ -92,7 +118,8 @@ export function usePlayerKeyboard({
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    // We use capture phase so we can stopPropagation before LRUD gets it
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
   }, [playerRef, isLive, onNext, onPrev, onMuteToggle, onVolumeUp, onVolumeDown, onClose]);
 }

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useFocusable, FocusContext } from '@noriginmedia/norigin-spatial-navigation';
+import { useLRUD } from '@shared/hooks/useLRUD';
 import { useWatchHistory, useClearHistory } from '../api';
 import { usePlayerStore, useUIStore } from '@lib/store';
 import { EmptyState } from '@shared/components/EmptyState';
@@ -23,18 +23,21 @@ const contentTypeIcons: Record<ContentType, string> = {
   series: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10',
 };
 
-function FocusableFilterTab({ label, isActive, onSelect }: {
+function FocusableFilterTab({ id, parent, label, isActive, onSelect }: {
+  id: string;
+  parent: string;
   label: string;
   isActive: boolean;
   onSelect: () => void;
 }) {
   const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, focused } = useFocusable({ onEnterPress: onSelect });
-  const showFocus = focused && inputMode === 'keyboard';
+  const { ref, isFocused, focusProps } = useLRUD({ id, parent, onEnter: onSelect });
+  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
     <button
       ref={ref}
+      {...focusProps}
       onClick={onSelect}
       className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
         isActive
@@ -49,23 +52,25 @@ function FocusableFilterTab({ label, isActive, onSelect }: {
   );
 }
 
-function FocusableHistoryItem({ item, progress, onClick }: {
+function FocusableHistoryItem({ id, parent, item, progress, onClick }: {
+  id: string;
+  parent: string;
   item: { content_icon?: string | null; content_name?: string | null; content_type: ContentType; content_id: number; duration_seconds: number; progress_seconds: number; watched_at: string };
   progress: number;
   onClick: () => void;
 }) {
   const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, focused } = useFocusable({
-    onEnterPress: onClick,
-    onFocus: ({ node }) => {
-      node?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
-    },
+  const { ref, isFocused, focusProps } = useLRUD({
+    id,
+    parent,
+    onEnter: onClick,
   });
-  const showFocus = focused && inputMode === 'keyboard';
+  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
     <div
       ref={ref}
+      {...focusProps}
       onClick={onClick}
       className={`group flex items-center gap-4 p-3 bg-surface-raised border rounded-lg cursor-pointer transition-all ${
         showFocus
@@ -146,18 +151,6 @@ export function HistoryPage() {
   const clearHistory = useClearHistory();
   const playStream = usePlayerStore((s) => s.playStream);
 
-  const { ref: tabsRef, focusKey: tabsFocusKey } = useFocusable({
-    focusKey: 'history-tabs',
-    trackChildren: true,
-    saveLastFocusedChild: true,
-  });
-
-  const { ref: listRef, focusKey: listFocusKey } = useFocusable({
-    focusKey: 'history-list',
-    trackChildren: true,
-    saveLastFocusedChild: true,
-  });
-
   const filteredHistory = useMemo(() => {
     if (!history) return [];
     const sorted = [...history].sort(
@@ -201,18 +194,18 @@ export function HistoryPage() {
       </div>
 
       {/* Filter Tabs */}
-      <FocusContext.Provider value={tabsFocusKey}>
-        <div ref={tabsRef} className="flex gap-1 mb-6 bg-surface rounded-lg p-1 w-fit">
-          {filterTabs.map((tab) => (
-            <FocusableFilterTab
-              key={tab.key}
-              label={tab.label}
-              isActive={activeFilter === tab.key}
-              onSelect={() => setActiveFilter(tab.key)}
-            />
-          ))}
-        </div>
-      </FocusContext.Provider>
+      <div className="flex gap-1 mb-6 bg-surface rounded-lg p-1 w-fit">
+        {filterTabs.map((tab) => (
+          <FocusableFilterTab
+            id={`history-tab-${tab.key}`}
+            parent="root"
+            key={tab.key}
+            label={tab.label}
+            isActive={activeFilter === tab.key}
+            onSelect={() => setActiveFilter(tab.key)}
+          />
+        ))}
+      </div>
 
       {/* Content */}
       {isLoading ? (
@@ -235,21 +228,21 @@ export function HistoryPage() {
           icon="history"
         />
       ) : (
-        <FocusContext.Provider value={listFocusKey}>
-          <div ref={listRef} className="space-y-2">
-            {filteredHistory.map((item) => {
-              const progress = getProgressPercent(item);
-              return (
-                <FocusableHistoryItem
-                  key={`${item.content_type}-${item.content_id}-${item.id}`}
-                  item={item}
-                  progress={progress}
-                  onClick={() => handleItemClick(item)}
-                />
-              );
-            })}
-          </div>
-        </FocusContext.Provider>
+        <div className="space-y-2">
+          {filteredHistory.map((item) => {
+            const progress = getProgressPercent(item);
+            return (
+              <FocusableHistoryItem
+                id={`history-item-${item.content_type}-${item.content_id}-${item.id}`}
+                parent="root"
+                key={`${item.content_type}-${item.content_id}-${item.id}`}
+                item={item}
+                progress={progress}
+                onClick={() => handleItemClick(item)}
+              />
+            );
+          })}
+        </div>
       )}
     </div>
     </PageTransition>

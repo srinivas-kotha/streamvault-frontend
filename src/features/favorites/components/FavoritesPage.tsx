@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useFocusable, FocusContext } from '@noriginmedia/norigin-spatial-navigation';
+import { useLRUD } from '@shared/hooks/useLRUD';
 import { useFavorites, useRemoveFavorite } from '../api';
 import { ContentCard } from '@shared/components/ContentCard';
 import { EmptyState } from '@shared/components/EmptyState';
@@ -18,19 +18,22 @@ const TABS: { key: TabFilter; label: string }[] = [
   { key: 'series', label: 'Series' },
 ];
 
-function FocusableTab({ label, count, isActive, onSelect }: {
+function FocusableTab({ id, parent, label, count, isActive, onSelect }: {
+  id: string;
+  parent: string;
   label: string;
   count: number;
   isActive: boolean;
   onSelect: () => void;
 }) {
   const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, focused } = useFocusable({ onEnterPress: onSelect });
-  const showFocus = focused && inputMode === 'keyboard';
+  const { ref, isFocused, focusProps } = useLRUD({ id, parent, onEnter: onSelect });
+  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
     <button
       ref={ref}
+      {...focusProps}
       onClick={onSelect}
       className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
         isActive
@@ -51,12 +54,6 @@ export function FavoritesPage() {
   const { data: favorites, isLoading } = useFavorites();
   const removeFavorite = useRemoveFavorite();
   const navigate = useNavigate();
-
-  const { ref: tabsRef, focusKey: tabsFocusKey } = useFocusable({
-    focusKey: 'favorites-tabs',
-    trackChildren: true,
-    saveLastFocusedChild: true,
-  });
 
   const counts = useMemo(() => {
     if (!favorites) return { all: 0, channel: 0, vod: 0, series: 0 };
@@ -109,19 +106,19 @@ export function FavoritesPage() {
       <h1 className="font-display text-2xl font-bold text-text-primary mb-6">Favorites</h1>
 
       {/* Tabs */}
-      <FocusContext.Provider value={tabsFocusKey}>
-        <div ref={tabsRef} className="flex gap-2 mb-6">
-          {TABS.map((tab) => (
-            <FocusableTab
-              key={tab.key}
-              label={tab.label}
-              count={counts[tab.key]}
-              isActive={activeTab === tab.key}
-              onSelect={() => setActiveTab(tab.key)}
-            />
-          ))}
-        </div>
-      </FocusContext.Provider>
+      <div className="flex gap-2 mb-6">
+        {TABS.map((tab) => (
+          <FocusableTab
+            id={`fav-tab-${tab.key}`}
+            parent="root"
+            key={tab.key}
+            label={tab.label}
+            count={counts[tab.key]}
+            isActive={activeTab === tab.key}
+            onSelect={() => setActiveTab(tab.key)}
+          />
+        ))}
+      </div>
 
       {/* Content */}
       {isLoading ? (

@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useFocusable, FocusContext } from '@noriginmedia/norigin-spatial-navigation';
+import { useLRUD } from '@shared/hooks/useLRUD';
 import { useFeaturedChannels, useEPG } from '../api';
 import { usePlayerStore, useUIStore } from '@lib/store';
 import { Badge } from '@shared/components/Badge';
@@ -22,18 +22,18 @@ function FeaturedCard({ channel }: { channel: XtreamLiveStream }) {
     navigate({ to: '/live', search: { play: String(channel.stream_id) } });
   }, [channel, playStream, navigate]);
 
-  const { ref, focused } = useFocusable({
-    onEnterPress: handleClick,
-    onFocus: ({ node }) => {
-      node?.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
-    },
+  const { ref, isFocused, focusProps } = useLRUD({
+    id: `featured-${channel.stream_id}`,
+    parent: 'root',
+    onEnter: handleClick,
   });
 
-  const showFocusRing = focused && inputMode === 'keyboard';
+  const showFocusRing = isFocused && inputMode === 'keyboard';
 
   return (
     <div
       ref={ref}
+      {...focusProps}
       onClick={handleClick}
       className={`group relative cursor-pointer rounded-xl overflow-hidden bg-surface-raised border transition-all duration-300 min-w-[220px] flex-shrink-0 ${
         showFocusRing
@@ -101,12 +101,6 @@ function FeaturedCard({ channel }: { channel: XtreamLiveStream }) {
 export function FeaturedChannels() {
   const { data: channels, isLoading } = useFeaturedChannels();
 
-  const { ref, focusKey } = useFocusable({
-    focusKey: 'featured-channels',
-    saveLastFocusedChild: true,
-    trackChildren: true,
-  });
-
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -126,18 +120,16 @@ export function FeaturedChannels() {
   if (!channels || channels.length === 0) return null;
 
   return (
-    <FocusContext.Provider value={focusKey}>
-      <div ref={ref} className="space-y-3">
-        <h2 className="font-display text-lg font-bold text-text-primary flex items-center gap-2">
-          <span className="w-1.5 h-5 bg-gradient-to-b from-teal to-indigo rounded-full" />
-          Featured Channels
-        </h2>
-        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
-          {channels.map((channel) => (
-            <FeaturedCard key={channel.stream_id} channel={channel} />
-          ))}
-        </div>
+    <div className="space-y-3">
+      <h2 className="font-display text-lg font-bold text-text-primary flex items-center gap-2">
+        <span className="w-1.5 h-5 bg-gradient-to-b from-teal to-indigo rounded-full" />
+        Featured Channels
+      </h2>
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+        {channels.map((channel) => (
+          <FeaturedCard key={channel.stream_id} channel={channel} />
+        ))}
       </div>
-    </FocusContext.Provider>
+    </div>
   );
 }

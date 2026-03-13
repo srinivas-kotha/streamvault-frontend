@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useMatchRoute, useNavigate } from '@tanstack/react-router';
-import { useFocusable, FocusContext } from '@noriginmedia/norigin-spatial-navigation';
+import { useLRUD } from '@shared/hooks/useLRUD';
 import { useAuthStore, useUIStore } from '@lib/store';
 import { useLogout } from '@features/auth/hooks/useAuth';
 import { useLiveCategories } from '@features/live/api';
@@ -35,12 +35,19 @@ export function TopNav() {
     return () => main.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   // Close profile dropdown on outside click or Escape key
   useEffect(() => {
-    if (!profileOpen) return;
-    const handleClick = () => setProfileOpen(false);
+    const handleClick = () => {
+      setProfileOpen(false);
+      setMobileMenuOpen(false);
+    };
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setProfileOpen(false);
+      if (e.key === 'Escape') {
+        setProfileOpen(false);
+        setMobileMenuOpen(false);
+      }
     };
     window.addEventListener('click', handleClick);
     window.addEventListener('keydown', handleKeyDown);
@@ -48,37 +55,94 @@ export function TopNav() {
       window.removeEventListener('click', handleClick);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [profileOpen]);
+  }, []);
 
+  const inputMode = useUIStore((s) => s.inputMode);
+
+  const { ref: hamburgerRef, isFocused: hamburgerFocused } = useLRUD({
+    id: 'hamburger-menu',
+    parent: 'top-nav',
+    onEnter: () => setMobileMenuOpen((prev) => !prev),
+  });
 
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled
+        scrolled || mobileMenuOpen
           ? 'bg-obsidian/90 backdrop-blur-xl border-b border-border-subtle shadow-lg'
           : 'bg-gradient-to-b from-obsidian/80 to-transparent'
       }`}
     >
-      <nav className="flex items-center h-16 px-6 lg:px-10">
-        {/* Logo */}
-        <Link
-          to="/"
-          className="font-display text-xl font-bold text-text-primary hover:text-teal transition-colors mr-8 flex-shrink-0"
-        >
-          Stream<span className="text-teal">Vault</span>
-        </Link>
+      <nav className="flex items-center justify-between h-16 px-4 lg:px-10">
+        <div className="flex items-center">
+          {/* Hamburger Menu Button (Mobile Only) */}
+          <button
+            ref={hamburgerRef}
+            onClick={(e) => {
+              e.stopPropagation();
+              setMobileMenuOpen(!mobileMenuOpen);
+              setProfileOpen(false);
+            }}
+            className={`md:hidden p-2 mr-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-raised/50 transition-colors ${
+              hamburgerFocused && inputMode === 'keyboard' ? 'ring-2 ring-teal/50 text-text-primary' : ''
+            }`}
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              {mobileMenuOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
 
-        {/* Nav items — wrapped in FocusContext for spatial nav */}
-        <TopNavFocusGroup languages={languages} matchRoute={matchRoute} />
+          {/* Logo */}
+          <Link
+            to="/"
+            className="font-display text-xl font-bold text-text-primary hover:text-teal transition-colors mr-8 flex-shrink-0"
+          >
+            Stream<span className="text-teal">Vault</span>
+          </Link>
+        </div>
+
+        {/* Desktop Nav Items */}
+        <div className="hidden md:flex flex-1 items-center overflow-x-auto scrollbar-hide">
+          <TopNavFocusGroup languages={languages} matchRoute={matchRoute} />
+        </div>
 
         {/* Profile */}
-        <ProfileMenu
-          username={username}
-          profileOpen={profileOpen}
-          setProfileOpen={setProfileOpen}
-          onLogout={() => logoutMutation.mutate()}
-        />
+        <div className="flex items-center">
+          {/* Search Icon (Mobile Only) */}
+          <Link
+            to="/search"
+            className="md:hidden p-2 mr-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-raised/50 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </Link>
+          
+          <ProfileMenu
+            username={username}
+            profileOpen={profileOpen}
+            setProfileOpen={(v) => {
+              setProfileOpen(v);
+              if (v) setMobileMenuOpen(false);
+            }}
+            onLogout={() => logoutMutation.mutate()}
+          />
+        </div>
       </nav>
+
+      {/* Mobile Menu Dropdown */}
+      <div
+        className={`md:hidden fixed top-16 left-0 right-0 bg-surface-raised border-b border-border shadow-xl px-4 py-4 space-y-2 overflow-y-auto transition-transform origin-top duration-300 ${
+          mobileMenuOpen ? 'scale-y-100 opacity-100' : 'scale-y-0 opacity-0 pointer-events-none'
+        }`}
+        style={{ maxHeight: 'calc(100vh - 64px)' }}
+      >
+        <TopNavFocusGroup languages={languages} matchRoute={matchRoute} isMobile={true} isOpen={mobileMenuOpen} />
+      </div>
     </header>
   );
 }
@@ -88,29 +152,32 @@ interface NavItemProps {
   label: string;
   isActive: boolean;
   icon?: React.ReactNode;
+  isFocusable?: boolean;
 }
 
-function NavItem({ to, label, isActive, icon }: NavItemProps) {
+function NavItem({ to, label, isActive, icon, isFocusable = true }: NavItemProps) {
   const navigate = useNavigate();
   const inputMode = useUIStore((s) => s.inputMode);
 
-  const { ref, focused } = useFocusable({
-    onEnterPress: () => {
+  const { ref, isFocused, focusProps } = useLRUD({
+    id: `nav-item-${to}`,
+    parent: 'top-nav-items',
+    isFocusable,
+    onEnter: () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       navigate({ to: to as any });
     },
-    onFocus: ({ node }) => {
-      node?.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
-    },
   });
 
-  const showFocus = focused && inputMode === 'keyboard';
+  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
     <Link
       ref={ref}
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       to={to as any}
+      {...focusProps}
+      tabIndex={isFocusable ? 0 : -1}
       className={`relative flex items-center gap-1.5 px-4 py-3 rounded-lg text-sm font-medium whitespace-nowrap min-h-[48px] transition-all ${
         isActive
           ? 'text-text-primary'
@@ -128,37 +195,38 @@ function NavItem({ to, label, isActive, icon }: NavItemProps) {
   );
 }
 
-function TopNavFocusGroup({ languages, matchRoute }: { languages: string[]; matchRoute: ReturnType<typeof useMatchRoute> }) {
+function TopNavFocusGroup({ languages, matchRoute, isMobile, isOpen = true }: { languages: string[]; matchRoute: ReturnType<typeof useMatchRoute>; isMobile?: boolean; isOpen?: boolean }) {
   const isHome = matchRoute({ to: '/', fuzzy: false });
 
-  const { ref, focusKey } = useFocusable({
-    focusKey: 'top-nav',
-    saveLastFocusedChild: true,
-    trackChildren: true,
-    isFocusBoundary: true,
-    focusBoundaryDirections: ['up'],
+  // Register a boundary container node for all the nav items
+  const { ref: groupRef } = useLRUD({
+    id: 'top-nav-items',
+    parent: 'top-nav',
+    orientation: isMobile ? 'vertical' : 'horizontal',
+    isFocusable: false, // It's just a structural proxy node
   });
 
   return (
-    <FocusContext.Provider value={focusKey}>
-      <div ref={ref} className="flex items-center gap-1 overflow-x-auto scrollbar-hide flex-1">
-        <NavItem to="/" label="Home" isActive={!!isHome} />
-        {languages.map((lang) => (
-          <NavItem
-            key={lang}
-            to={`/language/${lang.toLowerCase()}`}
-            label={lang}
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            isActive={!!matchRoute({ to: `/language/${lang.toLowerCase()}` as any, fuzzy: true })}
-          />
-        ))}
-        <NavItem to="/search" label="Search" isActive={!!matchRoute({ to: '/search', fuzzy: true })} icon={
+    <div ref={groupRef} className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center gap-1 overflow-x-auto scrollbar-hide flex-1'}`}>
+      <NavItem to="/" label="Home" isActive={!!isHome} isFocusable={isOpen} />
+      {languages.map((lang) => (
+        <NavItem
+          key={lang}
+          to={`/language/${lang.toLowerCase()}`}
+          label={lang}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          isActive={!!matchRoute({ to: `/language/${lang.toLowerCase()}` as any, fuzzy: true })}
+          isFocusable={isOpen}
+        />
+      ))}
+      {!isMobile && (
+        <NavItem isFocusable={isOpen} to="/search" label="Search" isActive={!!matchRoute({ to: '/search', fuzzy: true })} icon={
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         } />
-      </div>
-    </FocusContext.Provider>
+      )}
+    </div>
   );
 }
 
@@ -176,20 +244,28 @@ function ProfileMenu({
   const navigate = useNavigate();
   const inputMode = useUIStore((s) => s.inputMode);
 
-  const { ref: profileBtnRef, focused: profileFocused } = useFocusable({
-    onEnterPress: () => setProfileOpen(!profileOpen),
+  const { ref: profileBtnRef, isFocused: profileFocused } = useLRUD({
+    id: 'profile-btn',
+    parent: 'top-nav',
+    onEnter: () => setProfileOpen(!profileOpen),
   });
 
-  const { ref: favRef, focused: favFocused } = useFocusable({
-    onEnterPress: () => { navigate({ to: '/favorites' }); setProfileOpen(false); },
+  const { ref: favRef, isFocused: favFocused, focusProps: favProps } = useLRUD({
+    id: 'profile-menu-fav',
+    parent: 'profile-menu',
+    onEnter: () => { navigate({ to: '/favorites' }); setProfileOpen(false); },
   });
 
-  const { ref: histRef, focused: histFocused } = useFocusable({
-    onEnterPress: () => { navigate({ to: '/history' }); setProfileOpen(false); },
+  const { ref: histRef, isFocused: histFocused, focusProps: histProps } = useLRUD({
+    id: 'profile-menu-history',
+    parent: 'profile-menu',
+    onEnter: () => { navigate({ to: '/history' }); setProfileOpen(false); },
   });
 
-  const { ref: logoutRef, focused: logoutFocused } = useFocusable({
-    onEnterPress: onLogout,
+  const { ref: logoutRef, isFocused: logoutFocused, focusProps: logoutProps } = useLRUD({
+    id: 'profile-menu-logout',
+    parent: 'profile-menu',
+    onEnter: onLogout,
   });
 
   const showProfileFocus = profileFocused && inputMode === 'keyboard';
@@ -217,6 +293,7 @@ function ProfileMenu({
             ref={favRef}
             to="/favorites"
             role="menuitem"
+            {...favProps}
             className={`block px-4 py-2.5 text-sm min-h-[44px] flex items-center transition-colors ${
               favFocused && inputMode === 'keyboard'
                 ? 'text-text-primary bg-teal/10 ring-1 ring-teal/40'
@@ -229,6 +306,7 @@ function ProfileMenu({
             ref={histRef}
             to="/history"
             role="menuitem"
+            {...histProps}
             className={`block px-4 py-2.5 text-sm min-h-[44px] flex items-center transition-colors ${
               histFocused && inputMode === 'keyboard'
                 ? 'text-text-primary bg-teal/10 ring-1 ring-teal/40'
@@ -242,6 +320,7 @@ function ProfileMenu({
             ref={logoutRef}
             role="menuitem"
             onClick={onLogout}
+            {...logoutProps}
             className={`w-full text-left px-4 py-2.5 text-sm min-h-[44px] transition-colors ${
               logoutFocused && inputMode === 'keyboard'
                 ? 'text-error bg-error/10 ring-1 ring-error/40'

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useParams, useNavigate, useSearch } from '@tanstack/react-router';
-import { useFocusable, FocusContext } from '@noriginmedia/norigin-spatial-navigation';
+import { useLRUD } from '@shared/hooks/useLRUD';
 import { PageTransition } from '@shared/components/PageTransition';
 import { HeroBanner, type HeroItem } from '@shared/components/HeroBanner';
 import { useLanguageMovieRails } from './api';
@@ -18,18 +18,21 @@ const tabs: { key: TabKey; label: string }[] = [
   { key: 'live', label: 'Live TV' },
 ];
 
-function FocusableTab({ label, isActive, onSelect }: {
+function FocusableTab({ id, parent, label, isActive, onSelect }: {
+  id: string;
+  parent: string;
   label: string;
   isActive: boolean;
   onSelect: () => void;
 }) {
   const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, focused } = useFocusable({ onEnterPress: onSelect });
-  const showFocus = focused && inputMode === 'keyboard';
+  const { ref, isFocused, focusProps } = useLRUD({ id, parent, onEnter: onSelect });
+  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
     <button
       ref={ref}
+      {...focusProps}
       role="tab"
       aria-selected={isActive}
       onClick={onSelect}
@@ -62,12 +65,6 @@ export function LanguageHubPage() {
       search: { tab: newTab === 'movies' ? undefined : newTab } as any,
     });
   };
-
-  const { ref: tabsRef, focusKey: tabsFocusKey } = useFocusable({
-    focusKey: 'language-tabs',
-    trackChildren: true,
-    saveLastFocusedChild: true,
-  });
 
   // Data for hero banner only
   const { rails: movieRails } = useLanguageMovieRails(language);
@@ -117,22 +114,21 @@ export function LanguageHubPage() {
 
         {/* Content Tabs */}
         <div className="px-6 lg:px-10 relative z-10">
-          <FocusContext.Provider value={tabsFocusKey}>
-            <div
-              ref={tabsRef}
-              className="flex items-center gap-1 border-b border-border-subtle"
-              role="tablist"
-            >
-              {tabs.map((t) => (
-                <FocusableTab
-                  key={t.key}
-                  label={t.label}
-                  isActive={activeTab === t.key}
-                  onSelect={() => setActiveTab(t.key)}
-                />
-              ))}
-            </div>
-          </FocusContext.Provider>
+          <div
+            className="flex items-center gap-1 border-b border-border-subtle"
+            role="tablist"
+          >
+            {tabs.map((t) => (
+              <FocusableTab
+                id={`langhub-tab-${t.key}`}
+                parent="root"
+                key={t.key}
+                label={t.label}
+                isActive={activeTab === t.key}
+                onSelect={() => setActiveTab(t.key)}
+              />
+            ))}
+          </div>
         </div>
 
         {/* Tab Content */}

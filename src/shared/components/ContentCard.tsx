@@ -1,5 +1,5 @@
 import { useCallback, type ReactNode } from 'react';
-import { useFocusable } from '@noriginmedia/norigin-spatial-navigation';
+import { useLRUD } from '@shared/hooks/useLRUD';
 import { LazyImage } from './LazyImage';
 import { useUIStore } from '@lib/store';
 
@@ -14,18 +14,22 @@ interface ContentCardProps {
   onClick?: () => void;
   aspectRatio?: 'poster' | 'landscape' | 'square';
   focusKey?: string;
+  parentFocusKey?: string;
 }
 
-function FocusableFavoriteButton({ isFavorite, onToggle }: { isFavorite?: boolean; onToggle: () => void }) {
+function FocusableFavoriteButton({ isFavorite, onToggle, parentFocusKey }: { isFavorite?: boolean; onToggle: () => void; parentFocusKey?: string }) {
   const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, focused } = useFocusable({
-    onEnterPress: () => onToggle(),
+  const { ref, isFocused, focusProps } = useLRUD({
+    id: `fav-btn-${parentFocusKey}`,
+    parent: parentFocusKey || 'root',
+    onEnter: () => onToggle(),
   });
-  const showFocus = focused && inputMode === 'keyboard';
+  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
     <button
       ref={ref}
+      {...focusProps}
       onClick={(e) => { e.stopPropagation(); onToggle(); }}
       className={`absolute top-2 right-2 p-1.5 rounded-full bg-obsidian/60 backdrop-blur-sm hover:bg-obsidian/80 transition-all ${showFocus ? 'ring-2 ring-teal z-10' : ''}`}
       aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
@@ -60,6 +64,7 @@ export function ContentCard({
   onClick,
   aspectRatio = 'poster',
   focusKey: propFocusKey,
+  parentFocusKey,
 }: ContentCardProps) {
   const inputMode = useUIStore((s) => s.inputMode);
 
@@ -67,19 +72,18 @@ export function ContentCard({
     onClick?.();
   }, [onClick]);
 
-  const { ref, focused } = useFocusable({
-    focusKey: propFocusKey,
-    onEnterPress,
-    onFocus: ({ node }) => {
-      node?.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
-    },
+  const { ref, isFocused, focusProps } = useLRUD({
+    id: propFocusKey || `card-${title.replace(/\s+/g, '-').toLowerCase()}`,
+    parent: parentFocusKey || 'root',
+    onEnter: onEnterPress,
   });
 
-  const showFocusRing = focused && inputMode === 'keyboard';
+  const showFocusRing = isFocused && inputMode === 'keyboard';
 
   return (
     <div
       ref={ref}
+      {...focusProps}
       onClick={onClick}
       className={`group relative cursor-pointer rounded-lg overflow-hidden bg-surface-raised border transition-all duration-200 ambient-glow ${
         showFocusRing
@@ -106,7 +110,7 @@ export function ContentCard({
 
         {/* Favorite star */}
         {onFavoriteToggle && (
-          <FocusableFavoriteButton isFavorite={isFavorite} onToggle={onFavoriteToggle} />
+          <FocusableFavoriteButton isFavorite={isFavorite} onToggle={onFavoriteToggle} parentFocusKey={propFocusKey || `card-${title.replace(/\s+/g, '-').toLowerCase()}`} />
         )}
 
         {/* Progress bar */}

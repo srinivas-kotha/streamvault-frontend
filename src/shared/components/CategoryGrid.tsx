@@ -1,4 +1,4 @@
-import { useFocusable, FocusContext } from '@noriginmedia/norigin-spatial-navigation';
+import { useLRUD } from '@shared/hooks/useLRUD';
 import { useUIStore } from '@lib/store';
 
 interface CategoryGridProps {
@@ -8,20 +8,25 @@ interface CategoryGridProps {
   focusKey?: string;
 }
 
-function FocusableCategoryButton({ label, isActive, onSelect }: {
+function FocusableCategoryButton({ id, parent, label, isActive, onSelect }: {
+  id: string;
+  parent: string;
   label: string;
   isActive: boolean;
   onSelect: () => void;
 }) {
   const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, focused } = useFocusable({
-    onEnterPress: onSelect,
+  const { ref, isFocused, focusProps } = useLRUD({
+    id,
+    parent,
+    onEnter: onSelect,
   });
-  const showFocus = focused && inputMode === 'keyboard';
+  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
     <button
       ref={ref}
+      {...focusProps}
       onClick={onSelect}
       className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
         isActive
@@ -37,29 +42,27 @@ function FocusableCategoryButton({ label, isActive, onSelect }: {
 }
 
 export function CategoryGrid({ categories, selectedId, onSelect, focusKey: propFocusKey }: CategoryGridProps) {
-  const { ref, focusKey } = useFocusable({
-    focusKey: propFocusKey || 'category-grid',
-    trackChildren: true,
-    saveLastFocusedChild: true,
-  });
+  const parentId = propFocusKey || 'category-grid';
 
   return (
-    <FocusContext.Provider value={focusKey}>
-      <div ref={ref} className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-2">
+      <FocusableCategoryButton
+        id={`${parentId}-all`}
+        parent="root"
+        label="All"
+        isActive={!selectedId}
+        onSelect={() => onSelect('')}
+      />
+      {categories.map((cat) => (
         <FocusableCategoryButton
-          label="All"
-          isActive={!selectedId}
-          onSelect={() => onSelect('')}
+          id={`${parentId}-${cat.category_id}`}
+          parent="root"
+          key={cat.category_id}
+          label={cat.category_name}
+          isActive={selectedId === cat.category_id}
+          onSelect={() => onSelect(cat.category_id)}
         />
-        {categories.map((cat) => (
-          <FocusableCategoryButton
-            key={cat.category_id}
-            label={cat.category_name}
-            isActive={selectedId === cat.category_id}
-            onSelect={() => onSelect(cat.category_id)}
-          />
-        ))}
-      </div>
-    </FocusContext.Provider>
+      ))}
+    </div>
   );
 }

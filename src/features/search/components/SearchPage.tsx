@@ -7,7 +7,7 @@ import { SkeletonGrid } from '@shared/components/Skeleton';
 import { EmptyState } from '@shared/components/EmptyState';
 import { usePlayerStore, useUIStore } from '@lib/store';
 import { PageTransition } from '@shared/components/PageTransition';
-import { useFocusable, FocusContext } from '@noriginmedia/norigin-spatial-navigation';
+import { useLRUD } from '@shared/hooks/useLRUD';
 import { useLiveCategories } from '@features/live/api';
 import { useVODCategories } from '@features/vod/api';
 import { useSeriesCategories } from '@features/series/api';
@@ -16,12 +16,16 @@ import { getDetectedLanguages, getLiveCategoriesForLanguage, getMovieCategoriesF
 type TabType = 'all' | 'live' | 'vod' | 'series';
 
 function FocusableTab({
+  id,
+  parent,
   label,
   count,
   isActive,
   showCount,
   onSelect,
 }: {
+  id: string;
+  parent: string;
   label: string;
   count: number;
   isActive: boolean;
@@ -29,14 +33,17 @@ function FocusableTab({
   onSelect: () => void;
 }) {
   const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, focused } = useFocusable({
-    onEnterPress: onSelect,
+  const { ref, isFocused, focusProps } = useLRUD({
+    id,
+    parent,
+    onEnter: onSelect,
   });
-  const showFocus = focused && inputMode === 'keyboard';
+  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
     <button
       ref={ref}
+      {...focusProps}
       onClick={onSelect}
       className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-all min-h-[44px] ${
         isActive
@@ -62,13 +69,15 @@ function FocusableSearchInput({ inputRef, query, setQuery }: {
   setQuery: (q: string) => void;
 }) {
   const inputMode = useUIStore((s) => s.inputMode);
-  const { ref: focusRef, focused } = useFocusable({
-    onEnterPress: () => inputRef.current?.focus(),
+  const { ref: focusRef, isFocused, focusProps } = useLRUD({
+    id: 'search-input',
+    parent: 'root',
+    onEnter: () => inputRef.current?.focus(),
   });
-  const showFocus = focused && inputMode === 'keyboard';
+  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
-    <div ref={focusRef} className="relative">
+    <div ref={focusRef} {...focusProps} className="relative">
       <svg
         className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted"
         fill="none"
@@ -103,18 +112,21 @@ function FocusableSearchInput({ inputRef, query, setQuery }: {
   );
 }
 
-function FocusablePill({ label, isActive, onSelect }: {
+function FocusablePill({ id, parent, label, isActive, onSelect }: {
+  id: string;
+  parent: string;
   label: string;
   isActive: boolean;
   onSelect: () => void;
 }) {
   const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, focused } = useFocusable({ onEnterPress: onSelect });
-  const showFocus = focused && inputMode === 'keyboard';
+  const { ref, isFocused, focusProps } = useLRUD({ id, parent, onEnter: onSelect });
+  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
     <button
       ref={ref}
+      {...focusProps}
       onClick={onSelect}
       className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-medium transition-all min-h-[36px] ${
         isActive
@@ -211,19 +223,6 @@ export function SearchPage() {
   const showEmpty = showResults && counts.all === 0;
   const showPrompt = !hasQuery;
 
-  // Spatial nav context for search tabs
-  const { ref: tabsRef, focusKey: tabsFocusKey } = useFocusable({
-    focusKey: 'search-tabs',
-    trackChildren: true,
-    saveLastFocusedChild: true,
-  });
-
-  const { ref: langRef, focusKey: langFocusKey } = useFocusable({
-    focusKey: 'search-langs',
-    trackChildren: true,
-    saveLastFocusedChild: true,
-  });
-
   return (
     <PageTransition>
     <div className="space-y-6">
@@ -232,41 +231,43 @@ export function SearchPage() {
 
       {/* Language Filter Pills */}
       {hasQuery && languages.length > 1 && (
-        <FocusContext.Provider value={langFocusKey}>
-          <div ref={langRef} className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+          <FocusablePill
+            id="search-lang-all"
+            parent="root"
+            label="All Languages"
+            isActive={activeLang === null}
+            onSelect={() => setActiveLang(null)}
+          />
+          {languages.map((lang) => (
             <FocusablePill
-              label="All Languages"
-              isActive={activeLang === null}
-              onSelect={() => setActiveLang(null)}
+              id={`search-lang-${lang}`}
+              parent="root"
+              key={lang}
+              label={lang}
+              isActive={activeLang === lang}
+              onSelect={() => setActiveLang(activeLang === lang ? null : lang)}
             />
-            {languages.map((lang) => (
-              <FocusablePill
-                key={lang}
-                label={lang}
-                isActive={activeLang === lang}
-                onSelect={() => setActiveLang(activeLang === lang ? null : lang)}
-              />
-            ))}
-          </div>
-        </FocusContext.Provider>
+          ))}
+        </div>
       )}
 
-      {/* Tabs — wrapped in spatial nav context */}
+      {/* Tabs */}
       {hasQuery && (
-        <FocusContext.Provider value={tabsFocusKey}>
-          <div ref={tabsRef} className="flex gap-1 border-b border-white/10 pb-px">
-            {tabs.map((tab) => (
-              <FocusableTab
-                key={tab.key}
-                label={tab.label}
-                count={tab.count}
-                isActive={activeTab === tab.key}
-                showCount={!!showResults}
-                onSelect={() => handleTabSelect(tab.key)}
-              />
-            ))}
-          </div>
-        </FocusContext.Provider>
+        <div className="flex gap-1 border-b border-white/10 pb-px">
+          {tabs.map((tab) => (
+            <FocusableTab
+              id={`search-tab-${tab.key}`}
+              parent="root"
+              key={tab.key}
+              label={tab.label}
+              count={tab.count}
+              isActive={activeTab === tab.key}
+              showCount={!!showResults}
+              onSelect={() => handleTabSelect(tab.key)}
+            />
+          ))}
+        </div>
       )}
 
       {/* Loading */}

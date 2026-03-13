@@ -1,14 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
-import { init, useFocusable, FocusContext, setFocus } from '@noriginmedia/norigin-spatial-navigation';
+import { useLRUD } from '@shared/hooks/useLRUD';
+import { useLRUDContext } from '@shared/providers/LRUDProvider';
 import { useLogin } from '../hooks/useAuth';
-
-// Initialize spatial navigation for login page (safe to call multiple times)
-init({
-  debug: false,
-  visualDebug: false,
-  distanceCalculationMethod: 'center',
-});
 
 interface LoginForm {
   username: string;
@@ -26,8 +20,10 @@ function FocusableInput({ id, type = 'text', placeholder, autoComplete, error, r
   onEnterKey?: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const { ref: focusRef, focused } = useFocusable({
-    onEnterPress: () => inputRef.current?.focus(),
+  const { ref: focusRef, isFocused, focusProps } = useLRUD({
+    id: `${id}-input`,
+    parent: 'root',
+    onEnter: () => inputRef.current?.focus(),
   });
 
   const { ref: registerRef, ...registerRest } = register(id as keyof LoginForm, {
@@ -35,13 +31,13 @@ function FocusableInput({ id, type = 'text', placeholder, autoComplete, error, r
   });
 
   return (
-    <div ref={focusRef}>
+    <div ref={focusRef} {...focusProps}>
       <input
         id={id}
         type={type}
         autoComplete={autoComplete}
         enterKeyHint={enterKeyHint}
-        className={`w-full px-4 py-2.5 bg-surface-raised border rounded-lg text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-teal/50 focus:border-teal-dim transition-all ${focused ? 'border-teal ring-2 ring-teal/50' : 'border-border'}`}
+        className={`w-full px-4 py-2.5 bg-surface-raised border rounded-lg text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-teal/50 focus:border-teal-dim transition-all ${isFocused ? 'border-teal ring-2 ring-teal/50' : 'border-border'}`}
         placeholder={placeholder}
         ref={(el) => {
           registerRef(el);
@@ -66,19 +62,21 @@ function FocusableInput({ id, type = 'text', placeholder, autoComplete, error, r
 }
 
 function FocusableSubmitButton({ isPending }: { isPending: boolean }) {
-  const { ref, focused } = useFocusable({
-    onEnterPress: () => {
+  const { ref, isFocused, focusProps } = useLRUD({
+    id: 'login-submit-button',
+    parent: 'root',
+    onEnter: () => {
       document.querySelector<HTMLButtonElement>('#login-submit')?.click();
     },
   });
 
   return (
-    <div ref={ref}>
+    <div ref={ref} {...focusProps}>
       <button
         id="login-submit"
         type="submit"
         disabled={isPending}
-        className={`w-full py-2.5 px-4 bg-gradient-to-r from-teal-dim to-teal rounded-lg font-medium text-obsidian hover:opacity-90 disabled:opacity-50 transition-all focus:outline-none focus:ring-2 focus:ring-teal/50 focus:ring-offset-2 focus:ring-offset-obsidian ${focused ? 'ring-2 ring-teal/50 ring-offset-2 ring-offset-obsidian opacity-90' : ''}`}
+        className={`w-full py-2.5 px-4 bg-gradient-to-r from-teal-dim to-teal rounded-lg font-medium text-obsidian hover:opacity-90 disabled:opacity-50 transition-all focus:outline-none focus:ring-2 focus:ring-teal/50 focus:ring-offset-2 focus:ring-offset-obsidian ${isFocused ? 'ring-2 ring-teal/50 ring-offset-2 ring-offset-obsidian opacity-90' : ''}`}
       >
         {isPending ? (
           <span className="flex items-center justify-center gap-2">
@@ -99,19 +97,14 @@ function FocusableSubmitButton({ isPending }: { isPending: boolean }) {
 export function LoginPage() {
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>();
   const loginMutation = useLogin();
-
-  const { ref: containerRef, focusKey } = useFocusable({
-    focusKey: 'login-form',
-    trackChildren: true,
-    saveLastFocusedChild: true,
-  });
+  const { lrud } = useLRUDContext();
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      try { setFocus('login-form'); } catch { /* noop */ }
+      try { lrud.assignFocus('username-input'); } catch { /* noop */ }
     }, 100);
     return () => clearTimeout(timer);
-  }, []);
+  }, [lrud]);
 
   const onSubmit = (data: LoginForm) => {
     loginMutation.mutate(data);
@@ -135,48 +128,46 @@ export function LoginPage() {
             <p className="text-text-muted mt-2 text-sm">Sign in to your account</p>
           </div>
 
-          <FocusContext.Provider value={focusKey}>
-            <form ref={containerRef} onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-              <div>
-                <label htmlFor="username" className="block text-sm font-medium text-text-secondary mb-1.5">
-                  Username
-                </label>
-                <FocusableInput
-                  id="username"
-                  placeholder="Enter username"
-                  autoComplete="username"
-                  error={errors.username?.message}
-                  register={register}
-                  enterKeyHint="next"
-                  onEnterKey={() => document.getElementById('password')?.focus()}
-                />
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <div>
+              <label htmlFor="username" className="block text-sm font-medium text-text-secondary mb-1.5">
+                Username
+              </label>
+              <FocusableInput
+                id="username"
+                placeholder="Enter username"
+                autoComplete="username"
+                error={errors.username?.message}
+                register={register}
+                enterKeyHint="next"
+                onEnterKey={() => document.getElementById('password')?.focus()}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-text-secondary mb-1.5">
+                Password
+              </label>
+              <FocusableInput
+                id="password"
+                type="password"
+                placeholder="Enter password"
+                autoComplete="current-password"
+                error={errors.password?.message}
+                register={register}
+                enterKeyHint="go"
+                onEnterKey={() => document.querySelector<HTMLButtonElement>('#login-submit')?.click()}
+              />
+            </div>
+
+            {loginMutation.isError && (
+              <div className="bg-error/10 border border-error/30 rounded-lg px-4 py-2.5 text-error text-sm">
+                {loginMutation.error?.message || 'Invalid credentials'}
               </div>
+            )}
 
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-text-secondary mb-1.5">
-                  Password
-                </label>
-                <FocusableInput
-                  id="password"
-                  type="password"
-                  placeholder="Enter password"
-                  autoComplete="current-password"
-                  error={errors.password?.message}
-                  register={register}
-                  enterKeyHint="go"
-                  onEnterKey={() => document.querySelector<HTMLButtonElement>('#login-submit')?.click()}
-                />
-              </div>
-
-              {loginMutation.isError && (
-                <div className="bg-error/10 border border-error/30 rounded-lg px-4 py-2.5 text-error text-sm">
-                  {loginMutation.error?.message || 'Invalid credentials'}
-                </div>
-              )}
-
-              <FocusableSubmitButton isPending={loginMutation.isPending} />
-            </form>
-          </FocusContext.Provider>
+            <FocusableSubmitButton isPending={loginMutation.isPending} />
+          </form>
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import { useSearch, useNavigate } from '@tanstack/react-router';
-import { useFocusable, FocusContext } from '@noriginmedia/norigin-spatial-navigation';
+
 import { useLiveCategories, useLiveStreams } from '../api';
 import { ChannelGrid } from './ChannelGrid';
 import { EPGGrid } from './EPGGrid';
@@ -26,6 +26,8 @@ function categoryPriority(name: string): number {
   return 999;
 }
 
+import { useLRUD } from '@shared/hooks/useLRUD';
+
 // --- SidebarNav: category list with spatial navigation ---
 interface SidebarNavProps {
   categories: XtreamCategory[];
@@ -44,17 +46,17 @@ function SidebarCategoryButton({
   onSelect: (id: string) => void;
 }) {
   const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, focused } = useFocusable({
-    onEnterPress: () => onSelect(cat.category_id),
-    onFocus: ({ node }) => {
-      node?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
-    },
+  const { ref, isFocused, focusProps } = useLRUD({
+    id: `sidebar-cat-${cat.category_id}`,
+    parent: 'live-sidebar',
+    onEnter: () => onSelect(cat.category_id),
   });
-  const showFocus = focused && inputMode === 'keyboard';
+  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
     <button
       ref={ref}
+      {...focusProps}
       onClick={() => onSelect(cat.category_id)}
       className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
         isActive
@@ -69,20 +71,22 @@ function SidebarCategoryButton({
   );
 }
 
-function FocusableViewToggle({ isActive, onSelect, title, icon }: {
+function FocusableViewToggle({ isActive, onSelect, title, icon, id }: {
   mode?: string;
   isActive: boolean;
   onSelect: () => void;
   title: string;
   icon: React.ReactNode;
+  id: string;
 }) {
   const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, focused } = useFocusable({ onEnterPress: onSelect });
-  const showFocus = focused && inputMode === 'keyboard';
+  const { ref, isFocused, focusProps } = useLRUD({ id, parent: 'live-main', onEnter: onSelect });
+  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
     <button
       ref={ref}
+      {...focusProps}
       onClick={onSelect}
       className={`p-2 transition-colors ${
         isActive
@@ -104,13 +108,15 @@ function FocusableLiveSearch({ searchQuery, setSearchQuery }: {
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const inputMode = useUIStore((s) => s.inputMode);
-  const { ref: focusRef, focused } = useFocusable({
-    onEnterPress: () => inputRef.current?.focus(),
+  const { ref: focusRef, isFocused, focusProps } = useLRUD({
+    id: 'live-search',
+    parent: 'live-main',
+    onEnter: () => inputRef.current?.focus(),
   });
-  const showFocus = focused && inputMode === 'keyboard';
+  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
-    <div ref={focusRef} className="flex-1 max-w-sm">
+    <div ref={focusRef} {...focusProps} className="flex-1 max-w-sm">
       <input
         ref={inputRef}
         type="text"
@@ -126,36 +132,33 @@ function FocusableLiveSearch({ searchQuery, setSearchQuery }: {
 }
 
 function SidebarNav({ categories, activeCatId, isLoading, onSelect }: SidebarNavProps) {
-  const { ref, focusKey } = useFocusable({
-    focusKey: 'live-sidebar',
-    saveLastFocusedChild: true,
-    trackChildren: true,
-    isFocusBoundary: true,
-    focusBoundaryDirections: ['up', 'down'],
+  const { ref } = useLRUD({
+    id: 'live-sidebar',
+    parent: 'root',
+    orientation: 'vertical',
+    isFocusable: false, // Structual wrapper for the sidebar layout
   });
 
   return (
-    <FocusContext.Provider value={focusKey}>
-      <div ref={ref} className="w-56 flex-shrink-0 overflow-y-auto space-y-1 pr-2 max-h-[calc(100vh-8rem)]">
-        <h2 className="font-display text-lg font-bold text-text-primary mb-3">Live TV</h2>
-        {isLoading ? (
-          <div className="space-y-2">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="h-9 bg-surface-raised rounded-lg animate-pulse" />
-            ))}
-          </div>
-        ) : (
-          categories.map((cat) => (
-            <SidebarCategoryButton
-              key={cat.category_id}
-              cat={cat}
-              isActive={activeCatId === cat.category_id}
-              onSelect={onSelect}
-            />
-          ))
-        )}
-      </div>
-    </FocusContext.Provider>
+    <div ref={ref} className="w-56 flex-shrink-0 overflow-y-auto space-y-1 pr-2 max-h-[calc(100vh-8rem)]">
+      <h2 className="font-display text-lg font-bold text-text-primary mb-3">Live TV</h2>
+      {isLoading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="h-9 bg-surface-raised rounded-lg animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        categories.map((cat) => (
+          <SidebarCategoryButton
+            key={cat.category_id}
+            cat={cat}
+            isActive={activeCatId === cat.category_id}
+            onSelect={onSelect}
+          />
+        ))
+      )}
+    </div>
   );
 }
 
@@ -243,6 +246,7 @@ export function LivePage() {
             {/* View mode toggle */}
             <div className="flex items-center bg-surface-raised border border-border rounded-lg overflow-hidden">
               <FocusableViewToggle
+                id="toggle-view-grid"
                 mode="grid"
                 isActive={viewMode === 'grid'}
                 onSelect={() => setViewMode('grid')}
@@ -254,6 +258,7 @@ export function LivePage() {
                 }
               />
               <FocusableViewToggle
+                id="toggle-view-epg"
                 mode="epg"
                 isActive={viewMode === 'epg'}
                 onSelect={() => setViewMode('epg')}
