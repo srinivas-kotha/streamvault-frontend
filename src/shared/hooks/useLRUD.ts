@@ -29,7 +29,9 @@ function flushPending() {
   while (changed && pendingQueue.length > 0) {
     changed = false;
     for (let i = pendingQueue.length - 1; i >= 0; i--) {
-      const { id, config } = pendingQueue[i];
+      const entry = pendingQueue[i];
+      if (!entry) continue;
+      const { id, config } = entry;
       // Skip if already registered (e.g. by a re-mount)
       if (lrud.getNode(id)) {
         pendingQueue.splice(i, 1);
