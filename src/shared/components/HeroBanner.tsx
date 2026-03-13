@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useLRUD } from '@shared/hooks/useLRUD';
 import { usePlayerStore, useUIStore } from '@lib/store';
@@ -20,19 +20,31 @@ interface HeroBannerProps {
   parentFocusKey?: string;
 }
 
+/**
+ * HeroButton uses STABLE LRUD IDs ('hero-play' and 'hero-info') regardless of
+ * which carousel item is displayed. This prevents the auto-rotate from
+ * destroying focused LRUD nodes and breaking all D-pad navigation.
+ *
+ * The onClick/onEnter callbacks use refs to always reference the CURRENT item.
+ */
 function HeroButton({
-  onClick,
+  onClickRef,
   children,
   variant = 'primary',
   id,
 }: {
-  onClick: () => void;
+  onClickRef: React.RefObject<(() => void) | undefined>;
   children: React.ReactNode;
   variant?: 'primary' | 'secondary';
   id: string;
 }) {
   const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, isFocused, focusProps } = useLRUD({ id, parent: 'hero-banner', onEnter: onClick });
+  const handleAction = useCallback(() => onClickRef.current?.(), [onClickRef]);
+  const { ref, isFocused, focusProps } = useLRUD({
+    id,
+    parent: 'hero-banner',
+    onEnter: handleAction,
+  });
   const showFocus = isFocused && inputMode === 'keyboard';
 
   const base = variant === 'primary'
@@ -43,7 +55,7 @@ function HeroButton({
     <button
       ref={ref}
       {...focusProps}
-      onClick={onClick}
+      onClick={handleAction}
       className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all min-h-[48px] text-sm lg:text-base ${base} ${
         showFocus ? 'ring-2 ring-teal ring-offset-2 ring-offset-obsidian scale-105' : ''
       }`}
@@ -57,6 +69,7 @@ export function HeroBanner({ items, autoRotateMs = 8000, parentFocusKey = 'root'
   const [activeIndex, setActiveIndex] = useState(0);
   const navigate = useNavigate();
   const playStream = usePlayerStore((s) => s.playStream);
+  const inputMode = useUIStore((s) => s.inputMode);
 
   const safeItems = useMemo(() => items.slice(0, 5), [items]);
   const current = safeItems[activeIndex];
@@ -68,16 +81,12 @@ export function HeroBanner({ items, autoRotateMs = 8000, parentFocusKey = 'root'
     orientation: 'horizontal',
   });
 
-  // Auto-rotate (pause when hero is focused)
-  useEffect(() => {
-    if (safeItems.length <= 1) return;
-    const interval = setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % safeItems.length);
-    }, autoRotateMs);
-    return () => clearInterval(interval);
-  }, [safeItems.length, autoRotateMs, activeIndex]);
+  // Stable refs for current-item actions so HeroButton LRUD callbacks
+  // always fire the correct handler without re-registering LRUD nodes
+  const handlePlayRef = useRef<() => void>();
+  const handleInfoRef = useRef<() => void>();
 
-  const handlePlay = useCallback(() => {
+  handlePlayRef.current = () => {
     if (!current) return;
     if (current.type === 'live') {
       playStream(String(current.id), 'live', current.title);
@@ -86,16 +95,26 @@ export function HeroBanner({ items, autoRotateMs = 8000, parentFocusKey = 'root'
     } else {
       navigate({ to: '/series/$seriesId', params: { seriesId: String(current.id) } });
     }
-  }, [current, navigate, playStream]);
+  };
 
-  const handleMoreInfo = useCallback(() => {
+  handleInfoRef.current = () => {
     if (!current) return;
     if (current.type === 'vod') {
       navigate({ to: '/vod/$vodId', params: { vodId: String(current.id) } });
     } else if (current.type === 'series') {
       navigate({ to: '/series/$seriesId', params: { seriesId: String(current.id) } });
     }
-  }, [current, navigate]);
+  };
+
+  // Auto-rotate — pause when user is navigating with D-pad (keyboard mode)
+  useEffect(() => {
+    if (safeItems.length <= 1) return;
+    if (inputMode === 'keyboard') return; // Pause rotation during D-pad navigation
+    const interval = setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % safeItems.length);
+    }, autoRotateMs);
+    return () => clearInterval(interval);
+  }, [safeItems.length, autoRotateMs, inputMode]);
 
   if (!current) return null;
 
@@ -149,16 +168,16 @@ export function HeroBanner({ items, autoRotateMs = 8000, parentFocusKey = 'root'
               </p>
             )}
 
-            {/* Action buttons — focusable for TV remote */}
+            {/* Action buttons — stable LRUD IDs survive carousel rotation */}
             <div className="flex items-center gap-3">
-              <HeroButton id={`hero-play-${current.id}`} onClick={handlePlay} variant="primary">
+              <HeroButton id="hero-play" onClickRef={handlePlayRef} variant="primary">
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M8 5v14l11-7z" />
                 </svg>
                 Play
               </HeroButton>
               {current.type !== 'live' && (
-                <HeroButton id={`hero-info-${current.id}`} onClick={handleMoreInfo} variant="secondary">
+                <HeroButton id="hero-info" onClickRef={handleInfoRef} variant="secondary">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>

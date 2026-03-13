@@ -12,6 +12,8 @@ interface FocusableCardProps {
   onFavoriteToggle?: () => void;
   onClick?: () => void;
   aspectRatio?: 'poster' | 'landscape' | 'square';
+  /** Unique LRUD focus key — prevents ID collisions when titles match */
+  focusKey?: string;
 }
 
 export function FocusableCard({
@@ -25,6 +27,7 @@ export function FocusableCard({
   onFavoriteToggle,
   onClick,
   aspectRatio = 'poster',
+  focusKey,
 }: FocusableCardProps) {
   return (
     <div className="rail-item flex-shrink-0">
@@ -32,6 +35,7 @@ export function FocusableCard({
         image={image}
         title={title}
         subtitle={subtitle}
+        focusKey={focusKey}
         badge={
           isNew ? (
             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-teal text-obsidian">

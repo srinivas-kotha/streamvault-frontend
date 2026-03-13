@@ -202,6 +202,7 @@ export function SeriesTabContent({ language }: SeriesTabContentProps) {
               {rail.items.map((item) => (
                 <FocusableCard
                   key={item.series_id}
+                  focusKey={`series-${item.series_id}`}
                   image={item.cover}
                   title={item.name}
                   subtitle={item.genre || undefined}

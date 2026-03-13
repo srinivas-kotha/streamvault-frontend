@@ -223,6 +223,7 @@ export function MoviesTabContent({ language, lang }: MoviesTabContentProps) {
               {rail.items.map((item) => (
                 <FocusableCard
                   key={item.stream_id}
+                  focusKey={`vod-${item.stream_id}`}
                   image={item.stream_icon}
                   title={item.name}
                   subtitle={item.rating ? `⭐ ${item.rating}` : undefined}

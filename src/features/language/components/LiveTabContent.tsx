@@ -204,6 +204,7 @@ export function LiveTabContent({ language, lang }: LiveTabContentProps) {
               {rail.items.map((item) => (
                 <FocusableCard
                   key={item.stream_id}
+                  focusKey={`live-${item.stream_id}`}
                   image={item.stream_icon}
                   title={item.name}
                   isNew={isNewContent(item.added)}

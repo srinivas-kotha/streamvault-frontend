@@ -101,6 +101,7 @@ export function HomePage() {
           {teluguMovies.map((item) => (
             <FocusableCard
               key={item.stream_id}
+              focusKey={`vod-${item.stream_id}`}
               image={item.stream_icon}
               title={item.name}
               subtitle={item.rating ? `⭐ ${item.rating}` : undefined}
@@ -122,6 +123,7 @@ export function HomePage() {
           {teluguSeries.map((item) => (
             <FocusableCard
               key={item.series_id}
+              focusKey={`series-${item.series_id}`}
               image={item.cover}
               title={item.name}
               subtitle={item.channelName ? `via ${item.channelName}` : (item.genre || undefined)}
@@ -143,6 +145,7 @@ export function HomePage() {
           {hindiMovies.map((item) => (
             <FocusableCard
               key={item.stream_id}
+              focusKey={`vod-${item.stream_id}`}
               image={item.stream_icon}
               title={item.name}
               subtitle={item.rating ? `⭐ ${item.rating}` : undefined}
@@ -164,6 +167,7 @@ export function HomePage() {
           {hindiSeries.map((item) => (
             <FocusableCard
               key={item.series_id}
+              focusKey={`series-${item.series_id}`}
               image={item.cover}
               title={item.name}
               subtitle={item.channelName ? `via ${item.channelName}` : (item.genre || undefined)}

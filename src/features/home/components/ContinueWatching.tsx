@@ -58,6 +58,7 @@ export function ContinueWatching({ parentFocusKey }: ContinueWatchingProps) {
         return (
           <FocusableCard
             key={`${item.content_type}-${item.content_id}`}
+            focusKey={`cw-${item.content_type}-${item.content_id}`}
             image={item.content_icon ?? ''}
             title={item.content_name ?? 'Unknown'}
             subtitle={`${percent}% watched`}

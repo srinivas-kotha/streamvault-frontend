@@ -10,6 +10,29 @@ export const lrud = new Lrud();
 // Expose to window for Fire TV debug overlay
 (window as unknown as Record<string, unknown>).__LRUD_INSTANCE__ = lrud;
 
+// Debug: dump LRUD tree structure (call from console: __LRUD_DUMP__())
+(window as unknown as Record<string, unknown>).__LRUD_DUMP__ = () => {
+  function dumpNode(node: Record<string, unknown>, depth = 0): string {
+    const indent = '  '.repeat(depth);
+    const id = node.id as string;
+    const orient = node.orientation ? ` (${node.orientation})` : '';
+    const focusable = node.isFocusable ? ' [F]' : '';
+    const focused = lrud.currentFocusNode?.id === id ? ' <<<' : '';
+    const children = node.children as Record<string, unknown>[] | undefined;
+    let result = `${indent}${id}${orient}${focusable}${focused}\n`;
+    if (children) {
+      for (const child of children) {
+        result += dumpNode(child, depth + 1);
+      }
+    }
+    return result;
+  }
+  const root = lrud.getRootNode();
+  const dump = root ? dumpNode(root as unknown as Record<string, unknown>) : 'No root node';
+  console.log('[LRUD Tree]\n' + dump);
+  return dump;
+};
+
 interface LRUDContextType {
   lrud: Lrud;
 }
@@ -83,31 +106,23 @@ export function LRUDProvider({ children }: LRUDProviderProps) {
       }
 
       // Map keys to LRUD directions
-      switch (e.key) {
-        case 'ArrowUp':
-        case 'Up':
-          lrud.handleKeyEvent({ direction: 'up' });
-          e.preventDefault();
-          break;
-        case 'ArrowDown':
-        case 'Down':
-          lrud.handleKeyEvent({ direction: 'down' });
-          e.preventDefault();
-          break;
-        case 'ArrowLeft':
-        case 'Left':
-          lrud.handleKeyEvent({ direction: 'left' });
-          e.preventDefault();
-          break;
-        case 'ArrowRight':
-        case 'Right':
-          lrud.handleKeyEvent({ direction: 'right' });
-          e.preventDefault();
-          break;
-        case 'Enter':
-          lrud.handleKeyEvent({ direction: 'enter' });
-          e.preventDefault();
-          break;
+      const dirMap: Record<string, string> = {
+        ArrowUp: 'up', Up: 'up',
+        ArrowDown: 'down', Down: 'down',
+        ArrowLeft: 'left', Left: 'left',
+        ArrowRight: 'right', Right: 'right',
+        Enter: 'enter',
+      };
+      const dir = dirMap[e.key];
+      if (dir) {
+        const before = lrud.currentFocusNode?.id;
+        const result = lrud.handleKeyEvent({ direction: dir as 'up' | 'down' | 'left' | 'right' | 'enter' });
+        const after = lrud.currentFocusNode?.id;
+        // Debug: log navigation moves (remove after D-pad is verified working)
+        if (dir !== 'enter') {
+          console.debug(`[LRUD] ${dir}: ${before} → ${after}${result ? '' : ' (no move)'}`);
+        }
+        e.preventDefault();
       }
     }
 
