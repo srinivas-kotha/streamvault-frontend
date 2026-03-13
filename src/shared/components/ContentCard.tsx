@@ -1,8 +1,6 @@
 import { useCallback, type ReactNode } from 'react';
-import { useLRUD } from '@shared/hooks/useLRUD';
+import { useSpatialFocusable } from '@shared/hooks/useSpatialNav';
 import { LazyImage } from './LazyImage';
-import { useUIStore } from '@lib/store';
-import { useRailParent } from './ContentRail';
 
 interface ContentCardProps {
   image: string;
@@ -15,24 +13,20 @@ interface ContentCardProps {
   onClick?: () => void;
   aspectRatio?: 'poster' | 'landscape' | 'square';
   focusKey?: string;
-  parentFocusKey?: string;
 }
 
-function FocusableFavoriteButton({ isFavorite, onToggle, parentFocusKey }: { isFavorite?: boolean; onToggle: () => void; parentFocusKey?: string }) {
-  const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, isFocused, focusProps } = useLRUD({
-    id: `fav-btn-${parentFocusKey}`,
-    parent: parentFocusKey || 'root',
-    onEnter: () => onToggle(),
+function FocusableFavoriteButton({ isFavorite, onToggle, focusId }: { isFavorite?: boolean; onToggle: () => void; focusId: string }) {
+  const { ref, showFocusRing, focusProps } = useSpatialFocusable({
+    focusKey: focusId,
+    onEnterPress: () => onToggle(),
   });
-  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
     <button
       ref={ref}
       {...focusProps}
       onClick={(e) => { e.stopPropagation(); onToggle(); }}
-      className={`absolute top-2 right-2 p-1.5 rounded-full bg-obsidian/60 backdrop-blur-sm hover:bg-obsidian/80 transition-all ${showFocus ? 'ring-2 ring-teal z-10' : ''}`}
+      className={`absolute top-2 right-2 p-1.5 rounded-full bg-obsidian/60 backdrop-blur-sm hover:bg-obsidian/80 transition-all ${showFocusRing ? 'ring-2 ring-teal z-10' : ''}`}
       aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
     >
       <svg
@@ -65,22 +59,21 @@ export function ContentCard({
   onClick,
   aspectRatio = 'poster',
   focusKey: propFocusKey,
-  parentFocusKey,
 }: ContentCardProps) {
-  const inputMode = useUIStore((s) => s.inputMode);
-  const railParent = useRailParent();
+  const cardKey = propFocusKey || `card-${title.replace(/\s+/g, '-').toLowerCase()}`;
 
   const onEnterPress = useCallback(() => {
     onClick?.();
   }, [onClick]);
 
-  const { ref, isFocused, focusProps } = useLRUD({
-    id: propFocusKey || `card-${title.replace(/\s+/g, '-').toLowerCase()}`,
-    parent: parentFocusKey || railParent,
-    onEnter: onEnterPress,
+  const { ref, showFocusRing, focusProps } = useSpatialFocusable({
+    focusKey: cardKey,
+    onEnterPress,
+    onFocus: (layout) => {
+      // Auto-scroll into view when focused via D-pad
+      layout.node?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    },
   });
-
-  const showFocusRing = isFocused && inputMode === 'keyboard';
 
   return (
     <div
@@ -112,7 +105,7 @@ export function ContentCard({
 
         {/* Favorite star */}
         {onFavoriteToggle && (
-          <FocusableFavoriteButton isFavorite={isFavorite} onToggle={onFavoriteToggle} parentFocusKey={propFocusKey || `card-${title.replace(/\s+/g, '-').toLowerCase()}`} />
+          <FocusableFavoriteButton isFavorite={isFavorite} onToggle={onFavoriteToggle} focusId={`fav-btn-${cardKey}`} />
         )}
 
         {/* Progress bar */}
@@ -136,4 +129,3 @@ export function ContentCard({
     </div>
   );
 }
-

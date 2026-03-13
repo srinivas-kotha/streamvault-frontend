@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
-import { LRUDProvider } from './shared/providers/LRUDProvider';
+import { SpatialNavProvider } from './shared/providers/SpatialNavProvider';
 import './styles/tailwind.css';
 
 // Register service worker for PWA install (Samsung TV, Fire Stick, mobile, etc.)
@@ -15,8 +15,8 @@ if ('serviceWorker' in navigator) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <LRUDProvider>
+    <SpatialNavProvider>
       <App />
-    </LRUDProvider>
+    </SpatialNavProvider>
   </StrictMode>,
 );

@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useLRUD } from '@shared/hooks/useLRUD';
+import { useSpatialFocusable, useSpatialContainer, FocusContext } from '@shared/hooks/useSpatialNav';
+import { usePageFocus } from '@shared/hooks/usePageFocus';
 import { useFavorites, useRemoveFavorite } from '../api';
 import { ContentCard } from '@shared/components/ContentCard';
 import { EmptyState } from '@shared/components/EmptyState';
 import { SkeletonGrid } from '@shared/components/Skeleton';
 import { PageTransition } from '@shared/components/PageTransition';
-import { useUIStore } from '@lib/store';
 import type { ContentType, DbFavorite } from '@shared/types/api';
 
 type TabFilter = 'all' | ContentType;
@@ -18,17 +18,14 @@ const TABS: { key: TabFilter; label: string }[] = [
   { key: 'series', label: 'Series' },
 ];
 
-function FocusableTab({ id, parent, label, count, isActive, onSelect }: {
+function FocusableTab({ id, label, count, isActive, onSelect }: {
   id: string;
-  parent: string;
   label: string;
   count: number;
   isActive: boolean;
   onSelect: () => void;
 }) {
-  const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, isFocused, focusProps } = useLRUD({ id, parent, onEnter: onSelect });
-  const showFocus = isFocused && inputMode === 'keyboard';
+  const { ref, showFocusRing, focusProps } = useSpatialFocusable({ focusKey: id, onEnterPress: onSelect });
 
   return (
     <button
@@ -38,7 +35,7 @@ function FocusableTab({ id, parent, label, count, isActive, onSelect }: {
       className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
         isActive
           ? 'bg-teal/10 text-teal border border-teal/30'
-          : showFocus
+          : showFocusRing
             ? 'bg-surface-raised text-text-primary border border-teal ring-2 ring-teal/50'
             : 'bg-surface-raised text-text-secondary hover:text-text-primary hover:bg-surface-raised/80 border border-white/10'
       }`}
@@ -50,6 +47,8 @@ function FocusableTab({ id, parent, label, count, isActive, onSelect }: {
 }
 
 export function FavoritesPage() {
+  usePageFocus('FAVORITES_PAGE');
+  const { ref: containerRef, focusKey } = useSpatialContainer({ focusKey: 'FAVORITES_PAGE', forceFocus: true });
   const [activeTab, setActiveTab] = useState<TabFilter>('all');
   const { data: favorites, isLoading } = useFavorites();
   const removeFavorite = useRemoveFavorite();
@@ -102,7 +101,8 @@ export function FavoritesPage() {
 
   return (
     <PageTransition>
-    <div>
+    <FocusContext.Provider value={focusKey}>
+    <div ref={containerRef}>
       <h1 className="font-display text-2xl font-bold text-text-primary mb-6">Favorites</h1>
 
       {/* Tabs */}
@@ -110,7 +110,6 @@ export function FavoritesPage() {
         {TABS.map((tab) => (
           <FocusableTab
             id={`fav-tab-${tab.key}`}
-            parent="root"
             key={tab.key}
             label={tab.label}
             count={counts[tab.key]}
@@ -148,6 +147,7 @@ export function FavoritesPage() {
         </div>
       )}
     </div>
+    </FocusContext.Provider>
     </PageTransition>
   );
 }

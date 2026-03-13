@@ -12,21 +12,17 @@ import { filterContent, DEFAULT_FILTERS, type FilterState } from '@shared/utils/
 import { collectAllGenres, parseGenres } from '@shared/utils/parseGenres';
 import { useDebounce } from '@shared/hooks/useDebounce';
 import { PageTransition } from '@shared/components/PageTransition';
-import { useLRUD } from '@shared/hooks/useLRUD';
-import { useUIStore } from '@lib/store';
+import { useSpatialFocusable, useSpatialContainer, FocusContext } from '@shared/hooks/useSpatialNav';
 
 function FocusableSearchInput({ searchQuery, setSearchQuery }: {
   searchQuery: string;
   setSearchQuery: (q: string) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const inputMode = useUIStore((s) => s.inputMode);
-  const { ref: focusRef, isFocused, focusProps } = useLRUD({
-    id: 'vod-search-input',
-    parent: 'vod-controls',
-    onEnter: () => inputRef.current?.focus(),
+  const { ref: focusRef, showFocusRing, focusProps } = useSpatialFocusable({
+    focusKey: 'vod-search-input',
+    onEnterPress: () => inputRef.current?.focus(),
   });
-  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
     <div ref={focusRef} {...focusProps} className="flex items-center gap-4 mb-4">
@@ -37,7 +33,7 @@ function FocusableSearchInput({ searchQuery, setSearchQuery }: {
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         className={`w-full max-w-xs px-4 py-2 bg-surface-raised border rounded-lg text-text-primary placeholder:text-text-muted text-sm focus:outline-none focus:ring-2 focus:ring-teal/50 focus:border-teal-dim transition-all ${
-          showFocus ? 'border-teal ring-2 ring-teal/50' : 'border-border'
+          showFocusRing ? 'border-teal ring-2 ring-teal/50' : 'border-border'
         }`}
       />
     </div>
@@ -52,26 +48,8 @@ export function VODPage() {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const debouncedSearch = useDebounce(searchQuery);
 
-  const { ref: contentRef } = useLRUD({
-    id: 'vod-content',
-    parent: 'root',
-    orientation: 'vertical',
-    isFocusable: false,
-  });
-
-  useLRUD({
-    id: 'vod-controls',
-    parent: 'vod-content',
-    orientation: 'horizontal',
-    isFocusable: false,
-  });
-
-  useLRUD({
-    id: 'vod-grid',
-    parent: 'vod-content',
-    orientation: 'horizontal',
-    isWrapping: true,
-    isFocusable: false,
+  const { ref: contentRef, focusKey: contentFocusKey } = useSpatialContainer({
+    focusKey: 'vod-content',
   });
 
   const { data: categories, isLoading: catLoading } = useVODCategories();
@@ -106,6 +84,7 @@ export function VODPage() {
 
   return (
     <PageTransition>
+    <FocusContext.Provider value={contentFocusKey}>
     <div ref={contentRef}>
       <h1 className="font-display text-2xl font-bold text-text-primary mb-4">Movies</h1>
 
@@ -152,7 +131,6 @@ export function VODPage() {
               image={movie.stream_icon}
               title={movie.name}
               subtitle={parseGenres(movie.container_extension).length > 0 ? movie.container_extension.toUpperCase() : undefined}
-              parentFocusKey="vod-grid"
               badge={
                 movie.rating_5based > 0 ? (
                   <Badge variant="warning">{movie.rating_5based.toFixed(1)} ★</Badge>
@@ -164,6 +142,7 @@ export function VODPage() {
         </div>
       )}
     </div>
+    </FocusContext.Provider>
     </PageTransition>
   );
 }

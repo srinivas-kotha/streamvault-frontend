@@ -5,9 +5,9 @@ import { useDebounce } from '@shared/hooks/useDebounce';
 import { ContentCard } from '@shared/components/ContentCard';
 import { SkeletonGrid } from '@shared/components/Skeleton';
 import { EmptyState } from '@shared/components/EmptyState';
-import { usePlayerStore, useUIStore } from '@lib/store';
+import { usePlayerStore } from '@lib/store';
 import { PageTransition } from '@shared/components/PageTransition';
-import { useLRUD } from '@shared/hooks/useLRUD';
+import { useSpatialFocusable, useSpatialContainer, FocusContext } from '@shared/hooks/useSpatialNav';
 import { useLiveCategories } from '@features/live/api';
 import { useVODCategories } from '@features/vod/api';
 import { useSeriesCategories } from '@features/series/api';
@@ -17,7 +17,6 @@ type TabType = 'all' | 'live' | 'vod' | 'series';
 
 function FocusableTab({
   id,
-  parent,
   label,
   count,
   isActive,
@@ -25,20 +24,16 @@ function FocusableTab({
   onSelect,
 }: {
   id: string;
-  parent: string;
   label: string;
   count: number;
   isActive: boolean;
   showCount: boolean;
   onSelect: () => void;
 }) {
-  const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, isFocused, focusProps } = useLRUD({
-    id,
-    parent,
-    onEnter: onSelect,
+  const { ref, showFocusRing, focusProps } = useSpatialFocusable({
+    focusKey: id,
+    onEnterPress: onSelect,
   });
-  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
     <button
@@ -48,7 +43,7 @@ function FocusableTab({
       className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-all min-h-[44px] ${
         isActive
           ? 'text-teal border-b-2 border-teal bg-teal/5'
-          : showFocus
+          : showFocusRing
             ? 'text-text-primary bg-surface-raised ring-2 ring-teal/50'
             : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised'
       }`}
@@ -68,13 +63,10 @@ function FocusableSearchInput({ inputRef, query, setQuery }: {
   query: string;
   setQuery: (q: string) => void;
 }) {
-  const inputMode = useUIStore((s) => s.inputMode);
-  const { ref: focusRef, isFocused, focusProps } = useLRUD({
-    id: 'search-input',
-    parent: 'search-bar',
-    onEnter: () => inputRef.current?.focus(),
+  const { ref: focusRef, showFocusRing, focusProps } = useSpatialFocusable({
+    focusKey: 'search-input',
+    onEnterPress: () => inputRef.current?.focus(),
   });
-  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
     <div ref={focusRef} {...focusProps} className="relative">
@@ -94,7 +86,7 @@ function FocusableSearchInput({ inputRef, query, setQuery }: {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         className={`w-full pl-12 pr-4 py-3 bg-surface border rounded-xl text-text-primary placeholder:text-text-muted text-base focus:outline-none focus:ring-2 focus:ring-teal/50 focus:border-teal transition-all ${
-          showFocus ? 'border-teal ring-2 ring-teal/50' : 'border-white/10'
+          showFocusRing ? 'border-teal ring-2 ring-teal/50' : 'border-white/10'
         }`}
       />
       {query && (
@@ -112,16 +104,16 @@ function FocusableSearchInput({ inputRef, query, setQuery }: {
   );
 }
 
-function FocusablePill({ id, parent, label, isActive, onSelect }: {
+function FocusablePill({ id, label, isActive, onSelect }: {
   id: string;
-  parent: string;
   label: string;
   isActive: boolean;
   onSelect: () => void;
 }) {
-  const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, isFocused, focusProps } = useLRUD({ id, parent, onEnter: onSelect });
-  const showFocus = isFocused && inputMode === 'keyboard';
+  const { ref, showFocusRing, focusProps } = useSpatialFocusable({
+    focusKey: id,
+    onEnterPress: onSelect,
+  });
 
   return (
     <button
@@ -131,13 +123,40 @@ function FocusablePill({ id, parent, label, isActive, onSelect }: {
       className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-medium transition-all min-h-[36px] ${
         isActive
           ? 'bg-teal/15 text-teal border border-teal/30'
-          : showFocus
+          : showFocusRing
             ? 'bg-surface-raised text-text-primary border border-teal ring-2 ring-teal/50'
             : 'bg-surface-raised text-text-muted border border-border-subtle hover:text-text-secondary hover:border-border'
       }`}
     >
       {label}
     </button>
+  );
+}
+
+function SearchBarContainer({ children }: { children: React.ReactNode }) {
+  const { ref, focusKey } = useSpatialContainer({ focusKey: 'search-bar' });
+  return (
+    <FocusContext.Provider value={focusKey}>
+      <div ref={ref}>{children}</div>
+    </FocusContext.Provider>
+  );
+}
+
+function SearchTabsContainer({ children }: { children: React.ReactNode }) {
+  const { ref, focusKey } = useSpatialContainer({ focusKey: 'search-tabs' });
+  return (
+    <FocusContext.Provider value={focusKey}>
+      <div ref={ref}>{children}</div>
+    </FocusContext.Provider>
+  );
+}
+
+function SearchResultsContainer({ children }: { children: React.ReactNode }) {
+  const { ref, focusKey } = useSpatialContainer({ focusKey: 'search-results' });
+  return (
+    <FocusContext.Provider value={focusKey}>
+      <div ref={ref}>{children}</div>
+    </FocusContext.Provider>
   );
 }
 
@@ -149,33 +168,8 @@ export function SearchPage() {
   const navigate = useNavigate();
   const playStream = usePlayerStore((s) => s.playStream);
 
-  const { ref: contentRef } = useLRUD({
-    id: 'search-content',
-    parent: 'root',
-    orientation: 'vertical',
-    isFocusable: false,
-  });
-
-  useLRUD({
-    id: 'search-bar',
-    parent: 'search-content',
-    orientation: 'horizontal',
-    isFocusable: false,
-  });
-
-  useLRUD({
-    id: 'search-tabs',
-    parent: 'search-content',
-    orientation: 'horizontal',
-    isFocusable: false,
-  });
-
-  useLRUD({
-    id: 'search-results',
-    parent: 'search-content',
-    orientation: 'horizontal',
-    isWrapping: true,
-    isFocusable: false,
+  const { ref: contentRef, focusKey: contentFocusKey } = useSpatialContainer({
+    focusKey: 'search-content',
   });
 
   const debouncedQuery = useDebounce(query, 300);
@@ -254,49 +248,51 @@ export function SearchPage() {
 
   return (
     <PageTransition>
+    <FocusContext.Provider value={contentFocusKey}>
     <div ref={contentRef} className="space-y-6">
       {/* Search Input */}
-      <FocusableSearchInput inputRef={inputRef} query={query} setQuery={setQuery} />
+      <SearchBarContainer>
+        <FocusableSearchInput inputRef={inputRef} query={query} setQuery={setQuery} />
 
-      {/* Language Filter Pills */}
-      {hasQuery && languages.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-          <FocusablePill
-            id="search-lang-all"
-            parent="search-bar"
-            label="All Languages"
-            isActive={activeLang === null}
-            onSelect={() => setActiveLang(null)}
-          />
-          {languages.map((lang) => (
+        {/* Language Filter Pills */}
+        {hasQuery && languages.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 mt-6">
             <FocusablePill
-              id={`search-lang-${lang}`}
-              parent="search-bar"
-              key={lang}
-              label={lang}
-              isActive={activeLang === lang}
-              onSelect={() => setActiveLang(activeLang === lang ? null : lang)}
+              id="search-lang-all"
+              label="All Languages"
+              isActive={activeLang === null}
+              onSelect={() => setActiveLang(null)}
             />
-          ))}
-        </div>
-      )}
+            {languages.map((lang) => (
+              <FocusablePill
+                id={`search-lang-${lang}`}
+                key={lang}
+                label={lang}
+                isActive={activeLang === lang}
+                onSelect={() => setActiveLang(activeLang === lang ? null : lang)}
+              />
+            ))}
+          </div>
+        )}
+      </SearchBarContainer>
 
       {/* Tabs */}
       {hasQuery && (
-        <div className="flex gap-1 border-b border-white/10 pb-px">
-          {tabs.map((tab) => (
-            <FocusableTab
-              id={`search-tab-${tab.key}`}
-              parent="search-tabs"
-              key={tab.key}
-              label={tab.label}
-              count={tab.count}
-              isActive={activeTab === tab.key}
-              showCount={!!showResults}
-              onSelect={() => handleTabSelect(tab.key)}
-            />
-          ))}
-        </div>
+        <SearchTabsContainer>
+          <div className="flex gap-1 border-b border-white/10 pb-px">
+            {tabs.map((tab) => (
+              <FocusableTab
+                id={`search-tab-${tab.key}`}
+                key={tab.key}
+                label={tab.label}
+                count={tab.count}
+                isActive={activeTab === tab.key}
+                showCount={!!showResults}
+                onSelect={() => handleTabSelect(tab.key)}
+              />
+            ))}
+          </div>
+        </SearchTabsContainer>
       )}
 
       {/* Loading */}
@@ -326,88 +322,88 @@ export function SearchPage() {
 
       {/* Results */}
       {showResults && !showEmpty && (
-        <div className="space-y-8">
-          {/* Live TV */}
-          {(activeTab === 'all' || activeTab === 'live') && filteredData.live.length > 0 && (
-            <section>
-              {activeTab === 'all' && (
-                <h2 className="font-display text-lg font-bold text-text-primary mb-3">
-                  Live TV
-                  <span className="ml-2 text-sm font-normal text-text-secondary">({filteredData.live.length})</span>
-                </h2>
-              )}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                {filteredData.live.map((stream) => (
-                  <ContentCard
-                    key={`live-${stream.stream_id}`}
-                    image={stream.stream_icon}
-                    title={stream.name}
-                    aspectRatio="square"
-                    parentFocusKey="search-results"
-                    badge={
-                      <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase bg-red-500/90 text-white rounded">
-                        Live
-                      </span>
-                    }
-                    onClick={() => handleLiveClick(stream)}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
+        <SearchResultsContainer>
+          <div className="space-y-8">
+            {/* Live TV */}
+            {(activeTab === 'all' || activeTab === 'live') && filteredData.live.length > 0 && (
+              <section>
+                {activeTab === 'all' && (
+                  <h2 className="font-display text-lg font-bold text-text-primary mb-3">
+                    Live TV
+                    <span className="ml-2 text-sm font-normal text-text-secondary">({filteredData.live.length})</span>
+                  </h2>
+                )}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                  {filteredData.live.map((stream) => (
+                    <ContentCard
+                      key={`live-${stream.stream_id}`}
+                      image={stream.stream_icon}
+                      title={stream.name}
+                      aspectRatio="square"
+                      badge={
+                        <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase bg-red-500/90 text-white rounded">
+                          Live
+                        </span>
+                      }
+                      onClick={() => handleLiveClick(stream)}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
 
-          {/* Movies / VOD */}
-          {(activeTab === 'all' || activeTab === 'vod') && filteredData.vod.length > 0 && (
-            <section>
-              {activeTab === 'all' && (
-                <h2 className="font-display text-lg font-bold text-text-primary mb-3">
-                  Movies
-                  <span className="ml-2 text-sm font-normal text-text-secondary">({filteredData.vod.length})</span>
-                </h2>
-              )}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                {filteredData.vod.map((movie) => (
-                  <ContentCard
-                    key={`vod-${movie.stream_id}`}
-                    image={movie.stream_icon}
-                    title={movie.name}
-                    subtitle={movie.rating ? `${movie.rating}/10` : undefined}
-                    aspectRatio="poster"
-                    parentFocusKey="search-results"
-                    onClick={() => handleVodClick(movie.stream_id)}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
+            {/* Movies / VOD */}
+            {(activeTab === 'all' || activeTab === 'vod') && filteredData.vod.length > 0 && (
+              <section>
+                {activeTab === 'all' && (
+                  <h2 className="font-display text-lg font-bold text-text-primary mb-3">
+                    Movies
+                    <span className="ml-2 text-sm font-normal text-text-secondary">({filteredData.vod.length})</span>
+                  </h2>
+                )}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                  {filteredData.vod.map((movie) => (
+                    <ContentCard
+                      key={`vod-${movie.stream_id}`}
+                      image={movie.stream_icon}
+                      title={movie.name}
+                      subtitle={movie.rating ? `${movie.rating}/10` : undefined}
+                      aspectRatio="poster"
+                      onClick={() => handleVodClick(movie.stream_id)}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
 
-          {/* Series */}
-          {(activeTab === 'all' || activeTab === 'series') && filteredData.series.length > 0 && (
-            <section>
-              {activeTab === 'all' && (
-                <h2 className="font-display text-lg font-bold text-text-primary mb-3">
-                  Series
-                  <span className="ml-2 text-sm font-normal text-text-secondary">({filteredData.series.length})</span>
-                </h2>
-              )}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                {filteredData.series.map((show) => (
-                  <ContentCard
-                    key={`series-${show.series_id}`}
-                    image={show.cover}
-                    title={show.name}
-                    subtitle={show.genre || undefined}
-                    aspectRatio="poster"
-                    parentFocusKey="search-results"
-                    onClick={() => handleSeriesClick(show.series_id)}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
+            {/* Series */}
+            {(activeTab === 'all' || activeTab === 'series') && filteredData.series.length > 0 && (
+              <section>
+                {activeTab === 'all' && (
+                  <h2 className="font-display text-lg font-bold text-text-primary mb-3">
+                    Series
+                    <span className="ml-2 text-sm font-normal text-text-secondary">({filteredData.series.length})</span>
+                  </h2>
+                )}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                  {filteredData.series.map((show) => (
+                    <ContentCard
+                      key={`series-${show.series_id}`}
+                      image={show.cover}
+                      title={show.name}
+                      subtitle={show.genre || undefined}
+                      aspectRatio="poster"
+                      onClick={() => handleSeriesClick(show.series_id)}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        </SearchResultsContainer>
       )}
     </div>
+    </FocusContext.Provider>
     </PageTransition>
   );
 }

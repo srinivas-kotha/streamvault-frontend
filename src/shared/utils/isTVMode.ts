@@ -4,7 +4,7 @@
  * - Native WebView wrapper (Fire Stick — no display-mode: standalone, but
  *   user agent includes "FireTV" set by our MainActivity.kt)
  *
- * Used to hide desktop-only controls (mini-player, PiP) and enable D-pad
+ * Used to hide desktop-only controls (PiP, fullscreen) and enable D-pad
  * focus management.
  */
 export const isTVMode =

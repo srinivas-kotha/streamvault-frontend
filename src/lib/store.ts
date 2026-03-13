@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { isTVMode } from '@shared/utils/isTVMode';
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -29,7 +28,7 @@ interface UIState {
   setSidebarOpen: (open: boolean) => void;
   inputMode: 'mouse' | 'keyboard';
   setInputMode: (mode: 'mouse' | 'keyboard') => void;
-  /** When true, LRUDProvider skips arrow key handling (e.g. player captures arrows for seek/volume) */
+  /** When true, SpatialNavProvider skips arrow key handling (e.g. player captures arrows for seek/volume) */
   suppressArrowNav: boolean;
   setSuppressArrowNav: (suppress: boolean) => void;
 }
@@ -52,7 +51,6 @@ interface PlayerState {
   currentStreamName: string | null;
   startTime: number;
   isPlaying: boolean;
-  isMiniPlayer: boolean;
   volume: number;
   isMuted: boolean;
   // Series context
@@ -64,7 +62,6 @@ interface PlayerState {
   playSeries: (id: string, type: StreamType, name: string, seriesId: string, season: number, epIndex: number, startTime?: number) => void;
   stop: () => void;
   togglePlay: () => void;
-  toggleMiniPlayer: () => void;
   toggleMute: () => void;
   setVolume: (v: number) => void;
   setEpisodeIndex: (idx: number) => void;
@@ -76,7 +73,6 @@ export const usePlayerStore = create<PlayerState>((set) => ({
   currentStreamName: null,
   startTime: 0,
   isPlaying: false,
-  isMiniPlayer: false,
   volume: 1,
   isMuted: false,
   seriesId: null,
@@ -89,7 +85,6 @@ export const usePlayerStore = create<PlayerState>((set) => ({
       currentStreamName: name,
       startTime,
       isPlaying: true,
-      isMiniPlayer: !isTVMode,
       seriesId: null,
       seasonNumber: null,
       episodeIndex: null,
@@ -102,7 +97,6 @@ export const usePlayerStore = create<PlayerState>((set) => ({
       currentStreamName: name,
       startTime,
       isPlaying: true,
-      isMiniPlayer: !isTVMode,
       seriesId,
       seasonNumber: season,
       episodeIndex: epIndex,
@@ -115,13 +109,11 @@ export const usePlayerStore = create<PlayerState>((set) => ({
       currentStreamName: null,
       startTime: 0,
       isPlaying: false,
-      isMiniPlayer: false,
       seriesId: null,
       seasonNumber: null,
       episodeIndex: null,
     }),
   togglePlay: () => set((s) => ({ isPlaying: !s.isPlaying })),
-  toggleMiniPlayer: () => set((s) => ({ isMiniPlayer: !s.isMiniPlayer })),
   toggleMute: () => set((s) => ({ isMuted: !s.isMuted })),
   setVolume: (v) => set({ volume: v, isMuted: v === 0 }),
   setEpisodeIndex: (idx) => set({ episodeIndex: idx }),

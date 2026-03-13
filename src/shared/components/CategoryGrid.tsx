@@ -1,5 +1,4 @@
-import { useLRUD } from '@shared/hooks/useLRUD';
-import { useUIStore } from '@lib/store';
+import { useSpatialFocusable, useSpatialContainer, FocusContext } from '@shared/hooks/useSpatialNav';
 
 interface CategoryGridProps {
   categories: Array<{ category_id: string; category_name: string }>;
@@ -8,20 +7,16 @@ interface CategoryGridProps {
   focusKey?: string;
 }
 
-function FocusableCategoryButton({ id, parent, label, isActive, onSelect }: {
+function FocusableCategoryButton({ id, label, isActive, onSelect }: {
   id: string;
-  parent: string;
   label: string;
   isActive: boolean;
   onSelect: () => void;
 }) {
-  const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, isFocused, focusProps } = useLRUD({
-    id,
-    parent,
-    onEnter: onSelect,
+  const { ref, showFocusRing, focusProps } = useSpatialFocusable({
+    focusKey: id,
+    onEnterPress: onSelect,
   });
-  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
     <button
@@ -31,7 +26,7 @@ function FocusableCategoryButton({ id, parent, label, isActive, onSelect }: {
       className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
         isActive
           ? 'bg-teal/15 text-teal border border-teal/30'
-          : showFocus
+          : showFocusRing
             ? 'bg-surface-raised text-text-primary border border-teal ring-2 ring-teal/50'
             : 'bg-surface-raised text-text-secondary border border-border hover:border-border hover:text-text-primary'
       }`}
@@ -44,25 +39,29 @@ function FocusableCategoryButton({ id, parent, label, isActive, onSelect }: {
 export function CategoryGrid({ categories, selectedId, onSelect, focusKey: propFocusKey }: CategoryGridProps) {
   const parentId = propFocusKey || 'category-grid';
 
+  const { ref: containerRef, focusKey } = useSpatialContainer({
+    focusKey: parentId,
+  });
+
   return (
-    <div className="flex flex-wrap gap-2">
-      <FocusableCategoryButton
-        id={`${parentId}-all`}
-        parent="root"
-        label="All"
-        isActive={!selectedId}
-        onSelect={() => onSelect('')}
-      />
-      {categories.map((cat) => (
+    <FocusContext.Provider value={focusKey}>
+      <div ref={containerRef} className="flex flex-wrap gap-2">
         <FocusableCategoryButton
-          id={`${parentId}-${cat.category_id}`}
-          parent="root"
-          key={cat.category_id}
-          label={cat.category_name}
-          isActive={selectedId === cat.category_id}
-          onSelect={() => onSelect(cat.category_id)}
+          id={`${parentId}-all`}
+          label="All"
+          isActive={!selectedId}
+          onSelect={() => onSelect('')}
         />
-      ))}
-    </div>
+        {categories.map((cat) => (
+          <FocusableCategoryButton
+            id={`${parentId}-${cat.category_id}`}
+            key={cat.category_id}
+            label={cat.category_name}
+            isActive={selectedId === cat.category_id}
+            onSelect={() => onSelect(cat.category_id)}
+          />
+        ))}
+      </div>
+    </FocusContext.Provider>
   );
 }

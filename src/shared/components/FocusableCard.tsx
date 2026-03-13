@@ -12,7 +12,7 @@ interface FocusableCardProps {
   onFavoriteToggle?: () => void;
   onClick?: () => void;
   aspectRatio?: 'poster' | 'landscape' | 'square';
-  /** Unique LRUD focus key — prevents ID collisions when titles match */
+  /** Unique spatial focus key — prevents ID collisions when titles match */
   focusKey?: string;
 }
 

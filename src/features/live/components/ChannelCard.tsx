@@ -1,20 +1,18 @@
 import { useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useLRUD } from '@shared/hooks/useLRUD';
+import { useSpatialFocusable } from '@shared/hooks/useSpatialNav';
 import { useEPG } from '../api';
 import type { XtreamLiveStream } from '@shared/types/api';
 import { Badge } from '@shared/components/Badge';
-import { usePlayerStore, useUIStore } from '@lib/store';
+import { usePlayerStore } from '@lib/store';
 
 interface ChannelCardProps {
   channel: XtreamLiveStream;
-  parentFocusKey?: string;
 }
 
-export function ChannelCard({ channel, parentFocusKey }: ChannelCardProps) {
+export function ChannelCard({ channel }: ChannelCardProps) {
   const navigate = useNavigate();
   const playStream = usePlayerStore((s) => s.playStream);
-  const inputMode = useUIStore((s) => s.inputMode);
   const { data: epg } = useEPG(channel.stream_id);
 
   const nowPlaying = epg?.find((item) => {
@@ -27,13 +25,10 @@ export function ChannelCard({ channel, parentFocusKey }: ChannelCardProps) {
     navigate({ to: '/live', search: { play: String(channel.stream_id) } });
   }, [channel, playStream, navigate]);
 
-  const { ref, isFocused, focusProps } = useLRUD({
-    id: `channel-${channel.stream_id}`,
-    parent: parentFocusKey || 'root',
-    onEnter: handlePlay,
+  const { ref, showFocusRing, focusProps } = useSpatialFocusable({
+    focusKey: `channel-${channel.stream_id}`,
+    onEnterPress: handlePlay,
   });
-
-  const showFocusRing = isFocused && inputMode === 'keyboard';
 
   return (
     <div

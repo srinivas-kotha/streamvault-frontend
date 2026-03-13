@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useLRUD } from '@shared/hooks/useLRUD';
+import { useSpatialFocusable, useSpatialContainer, FocusContext } from '@shared/hooks/useSpatialNav';
+import { usePageFocus } from '@shared/hooks/usePageFocus';
 import { useWatchHistory, useClearHistory } from '../api';
-import { usePlayerStore, useUIStore } from '@lib/store';
+import { usePlayerStore } from '@lib/store';
 import { EmptyState } from '@shared/components/EmptyState';
 import { formatDuration, formatTimeAgo } from '@shared/utils/formatDuration';
 import { PageTransition } from '@shared/components/PageTransition';
@@ -23,16 +24,13 @@ const contentTypeIcons: Record<ContentType, string> = {
   series: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10',
 };
 
-function FocusableFilterTab({ id, parent, label, isActive, onSelect }: {
+function FocusableFilterTab({ id, label, isActive, onSelect }: {
   id: string;
-  parent: string;
   label: string;
   isActive: boolean;
   onSelect: () => void;
 }) {
-  const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, isFocused, focusProps } = useLRUD({ id, parent, onEnter: onSelect });
-  const showFocus = isFocused && inputMode === 'keyboard';
+  const { ref, showFocusRing, focusProps } = useSpatialFocusable({ focusKey: id, onEnterPress: onSelect });
 
   return (
     <button
@@ -42,7 +40,7 @@ function FocusableFilterTab({ id, parent, label, isActive, onSelect }: {
       className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
         isActive
           ? 'bg-teal/10 text-teal'
-          : showFocus
+          : showFocusRing
             ? 'text-text-primary bg-surface-raised ring-2 ring-teal/50'
             : 'text-text-muted hover:text-text-primary'
       }`}
@@ -52,20 +50,16 @@ function FocusableFilterTab({ id, parent, label, isActive, onSelect }: {
   );
 }
 
-function FocusableHistoryItem({ id, parent, item, progress, onClick }: {
+function FocusableHistoryItem({ id, item, progress, onClick }: {
   id: string;
-  parent: string;
   item: { content_icon?: string | null; content_name?: string | null; content_type: ContentType; content_id: number; duration_seconds: number; progress_seconds: number; watched_at: string };
   progress: number;
   onClick: () => void;
 }) {
-  const inputMode = useUIStore((s) => s.inputMode);
-  const { ref, isFocused, focusProps } = useLRUD({
-    id,
-    parent,
-    onEnter: onClick,
+  const { ref, showFocusRing, focusProps } = useSpatialFocusable({
+    focusKey: id,
+    onEnterPress: onClick,
   });
-  const showFocus = isFocused && inputMode === 'keyboard';
 
   return (
     <div
@@ -73,7 +67,7 @@ function FocusableHistoryItem({ id, parent, item, progress, onClick }: {
       {...focusProps}
       onClick={onClick}
       className={`group flex items-center gap-4 p-3 bg-surface-raised border rounded-lg cursor-pointer transition-all ${
-        showFocus
+        showFocusRing
           ? 'border-teal ring-2 ring-teal/50 shadow-[0_0_15px_rgba(45,212,191,0.1)]'
           : 'border-border-subtle hover:border-teal/30 hover:shadow-[0_0_15px_rgba(45,212,191,0.1)]'
       }`}
@@ -137,7 +131,7 @@ function FocusableHistoryItem({ id, parent, item, progress, onClick }: {
       </div>
 
       {/* Continue indicator - always visible on TV */}
-      <div className={`flex-shrink-0 px-3 py-1.5 text-xs font-medium text-teal bg-teal/10 rounded-lg transition-all ${showFocus ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+      <div className={`flex-shrink-0 px-3 py-1.5 text-xs font-medium text-teal bg-teal/10 rounded-lg transition-all ${showFocusRing ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
         Continue
       </div>
     </div>
@@ -146,6 +140,8 @@ function FocusableHistoryItem({ id, parent, item, progress, onClick }: {
 
 export function HistoryPage() {
   const navigate = useNavigate();
+  usePageFocus('HISTORY_PAGE');
+  const { ref: containerRef, focusKey } = useSpatialContainer({ focusKey: 'HISTORY_PAGE', forceFocus: true });
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
   const { data: history, isLoading } = useWatchHistory();
   const clearHistory = useClearHistory();
@@ -178,7 +174,8 @@ export function HistoryPage() {
 
   return (
     <PageTransition>
-    <div>
+    <FocusContext.Provider value={focusKey}>
+    <div ref={containerRef}>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-display text-2xl font-bold text-text-primary">Watch History</h1>
@@ -198,7 +195,6 @@ export function HistoryPage() {
         {filterTabs.map((tab) => (
           <FocusableFilterTab
             id={`history-tab-${tab.key}`}
-            parent="root"
             key={tab.key}
             label={tab.label}
             isActive={activeFilter === tab.key}
@@ -234,7 +230,6 @@ export function HistoryPage() {
             return (
               <FocusableHistoryItem
                 id={`history-item-${item.content_type}-${item.content_id}-${item.id}`}
-                parent="root"
                 key={`${item.content_type}-${item.content_id}-${item.id}`}
                 item={item}
                 progress={progress}
@@ -245,6 +240,7 @@ export function HistoryPage() {
         </div>
       )}
     </div>
+    </FocusContext.Provider>
     </PageTransition>
   );
 }

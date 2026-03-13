@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { lrud } from '@shared/providers/LRUDProvider';
+import { setFocus } from '@noriginmedia/norigin-spatial-navigation';
 
 /**
  * Sets spatial navigation focus to a target focusKey when the page mounts.
@@ -9,7 +9,7 @@ import { lrud } from '@shared/providers/LRUDProvider';
 export function usePageFocus(focusKey: string, delay = 100) {
   useEffect(() => {
     const timer = setTimeout(() => {
-      try { lrud.assignFocus(focusKey); } catch { /* focusKey may not be registered yet */ }
+      try { setFocus(focusKey); } catch { /* focusKey may not be registered yet */ }
     }, delay);
 
     return () => clearTimeout(timer);
