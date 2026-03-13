@@ -5,6 +5,9 @@ import { useUIStore } from '@lib/store';
 // Create a global singleton instance of LRUD for the app
 export const lrud = new Lrud();
 
+// Expose to window for Fire TV debug overlay
+(window as Record<string, unknown>).__LRUD_INSTANCE__ = lrud;
+
 interface LRUDContextType {
   lrud: Lrud;
 }
@@ -97,16 +100,13 @@ export function LRUDProvider({ children }: LRUDProviderProps) {
       setInputMode('mouse');
     }
 
-    // Listen on both window and document for key events.
-    // Native WebView wrapper injects synthetic KeyboardEvents via evaluateJavascript()
-    // which dispatches on both document and window. Capture phase ensures we
-    // intercept before any child element can swallow the event.
-    window.addEventListener('keydown', handleKeyDown, { capture: true });
+    // Listen on document with capture phase. Fire TV native wrapper injects
+    // synthetic KeyboardEvents via evaluateJavascript() dispatched on document.
+    // Desktop browsers also bubble keydown from DOM elements up to document.
     document.addEventListener('keydown', handleKeyDown, { capture: true });
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown, { capture: true });
       document.removeEventListener('keydown', handleKeyDown, { capture: true });
       window.removeEventListener('mousemove', handleMouseMove);
     };
