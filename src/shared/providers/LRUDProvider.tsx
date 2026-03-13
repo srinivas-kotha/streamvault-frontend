@@ -48,6 +48,12 @@ export function LRUDProvider({ children }: LRUDProviderProps) {
       
       if (isNavKey) {
         setInputMode('keyboard');
+
+        // On first key press, if LRUD has no focused node, assign focus to root.
+        // This bootstraps D-pad navigation on TV/Fire Stick where there's no mouse.
+        if (!lrud.currentFocusNode) {
+          try { lrud.assignFocus('root'); } catch { /* no focusable nodes yet */ }
+        }
       }
 
       // Map keys to LRUD directions
