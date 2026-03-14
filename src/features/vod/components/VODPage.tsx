@@ -127,13 +127,13 @@ export function VODPage() {
 
       {/* Results */}
       {streamsLoading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-3">
           <SkeletonGrid count={12} aspectRatio="poster" />
         </div>
       ) : processedStreams.length === 0 ? (
         <EmptyState title="No movies found" message="Try adjusting your filters" icon="content" />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-3">
           {processedStreams.map((movie) => (
             <ContentCard
               key={movie.stream_id}

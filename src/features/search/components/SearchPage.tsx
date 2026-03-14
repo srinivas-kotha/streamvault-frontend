@@ -302,7 +302,7 @@ export function SearchPage() {
 
       {/* Loading */}
       {showLoading && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-3">
           <SkeletonGrid count={12} />
         </div>
       )}
@@ -338,7 +338,7 @@ export function SearchPage() {
                     <span className="ml-2 text-sm font-normal text-text-secondary">({filteredData.live.length})</span>
                   </h2>
                 )}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-3">
                   {filteredData.live.map((stream) => (
                     <ContentCard
                       key={`live-${stream.stream_id}`}
@@ -366,7 +366,7 @@ export function SearchPage() {
                     <span className="ml-2 text-sm font-normal text-text-secondary">({filteredData.vod.length})</span>
                   </h2>
                 )}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-3">
                   {filteredData.vod.map((movie) => (
                     <ContentCard
                       key={`vod-${movie.stream_id}`}
@@ -390,7 +390,7 @@ export function SearchPage() {
                     <span className="ml-2 text-sm font-normal text-text-secondary">({filteredData.series.length})</span>
                   </h2>
                 )}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-3">
                   {filteredData.series.map((show) => (
                     <ContentCard
                       key={`series-${show.series_id}`}

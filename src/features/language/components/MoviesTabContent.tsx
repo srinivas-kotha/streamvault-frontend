@@ -313,7 +313,7 @@ export function MoviesTabContent({ language, lang }: MoviesTabContentProps) {
         /* Grid mode (filters active) */
         <div>
           {allLoading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-3">
               <SkeletonGrid count={18} aspectRatio="poster" />
             </div>
           ) : processedMovies.length === 0 ? (
@@ -336,7 +336,7 @@ export function MoviesTabContent({ language, lang }: MoviesTabContentProps) {
                 </p>
               )}
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+              <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-3">
                 {processedMovies.map((movie) => (
                   <ContentCard
                     key={movie.stream_id}

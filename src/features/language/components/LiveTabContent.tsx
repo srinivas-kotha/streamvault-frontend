@@ -219,7 +219,7 @@ export function LiveTabContent({ language, lang }: LiveTabContentProps) {
               {processedChannels.length} channel
               {processedChannels.length !== 1 ? 's' : ''}
             </p>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-3">
               {processedChannels.map((channel) => (
                 <ContentCard
                   key={channel.stream_id}
