@@ -8,7 +8,7 @@ import { Skeleton } from '@shared/components/Skeleton';
 import { formatDuration } from '@shared/utils/formatDuration';
 import { parseGenres } from '@shared/utils/parseGenres';
 import { PageTransition } from '@shared/components/PageTransition';
-import { usePlayerStore } from '@lib/store';
+import { PlayerPage } from '@features/player/components/PlayerPage';
 import { useSpatialFocusable, useSpatialContainer, FocusContext, setFocus, doesFocusableExist } from '@shared/hooks/useSpatialNav';
 
 type EpisodeSortKey = 'latest' | 'oldest' | 'episode';
@@ -465,24 +465,40 @@ export function SeriesDetail() {
     return null;
   }, [data?.info]);
 
-  const playSeries = usePlayerStore((s) => s.playSeries);
-
-  // Build episode list for next/prev navigation (in display order)
-  const episodeEntries = useMemo(() => {
-    return allEpisodes.map((ep) => ({
-      id: String(ep.id),
-      name: `${data?.info.name || 'Series'} - S${activeSeason}E${ep.episode_num} - ${ep.title}`,
-    }));
-  }, [allEpisodes, data?.info.name, activeSeason]);
+  // Inline player state (same pattern as MovieDetail)
+  const [isPlayerOpen, setIsPlayerOpen] = useState(false);
+  const [playerEpisodeId, setPlayerEpisodeId] = useState<string | null>(null);
+  const [playerEpisodeName, setPlayerEpisodeName] = useState<string>('');
+  const [playerStartTime, setPlayerStartTime] = useState(0);
+  const [playerEpIndex, setPlayerEpIndex] = useState<number | null>(null);
 
   const playEpisode = useCallback(
     (ep: (typeof allEpisodes)[0], startTime = 0) => {
       const name = `${data?.info.name || 'Series'} - S${activeSeason}E${ep.episode_num} - ${ep.title}`;
       const epIndex = allEpisodes.findIndex((e) => e.id === ep.id);
-      playSeries(String(ep.id), 'series', name, seriesId, activeSeason ?? 1, epIndex, startTime, episodeEntries);
+      setPlayerEpisodeId(String(ep.id));
+      setPlayerEpisodeName(name);
+      setPlayerStartTime(startTime);
+      setPlayerEpIndex(epIndex);
+      setIsPlayerOpen(true);
     },
-    [data?.info.name, activeSeason, playSeries, seriesId, allEpisodes, episodeEntries]
+    [data?.info.name, activeSeason, allEpisodes]
   );
+
+  const playNextEpisode = useCallback(() => {
+    if (playerEpIndex === null || playerEpIndex >= allEpisodes.length - 1) return;
+    const nextEp = allEpisodes[playerEpIndex + 1];
+    if (nextEp) playEpisode(nextEp);
+  }, [playerEpIndex, allEpisodes, playEpisode]);
+
+  const playPrevEpisode = useCallback(() => {
+    if (playerEpIndex === null || playerEpIndex <= 0) return;
+    const prevEp = allEpisodes[playerEpIndex - 1];
+    if (prevEp) playEpisode(prevEp);
+  }, [playerEpIndex, allEpisodes, playEpisode]);
+
+  const hasNextEp = playerEpIndex !== null && playerEpIndex < allEpisodes.length - 1;
+  const hasPrevEp = playerEpIndex !== null && playerEpIndex > 0;
 
 
   const handleLoadMore = useCallback(() => {
@@ -597,6 +613,32 @@ export function SeriesDetail() {
               </button>
             </div>
 
+            {/* Inline Player */}
+            {isPlayerOpen && playerEpisodeId && (
+              <div className="relative mb-6">
+                <button
+                  onClick={() => setIsPlayerOpen(false)}
+                  className="absolute top-3 right-3 z-20 p-2 bg-obsidian/80 rounded-full text-text-muted hover:text-text-primary transition-colors"
+                  title="Close player"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+                <PlayerPage
+                  streamType="series"
+                  streamId={playerEpisodeId}
+                  streamName={playerEpisodeName}
+                  startTime={playerStartTime}
+                  hasNext={hasNextEp}
+                  hasPrev={hasPrevEp}
+                  onNext={hasNextEp ? playNextEpisode : undefined}
+                  onPrev={hasPrevEp ? playPrevEpisode : undefined}
+                  onClose={() => setIsPlayerOpen(false)}
+                />
+              </div>
+            )}
+
             {/* Hero with backdrop */}
             <div className="relative overflow-hidden mb-6">
               <div className="aspect-[21/9] relative bg-surface max-h-[400px]">
@@ -659,8 +701,18 @@ export function SeriesDetail() {
                 episode={lastWatchedEpisode}
                 seriesName={info.name}
                 onResume={(contentId, contentName, progressSeconds) => {
-                  const epIndex = allEpisodes.findIndex((e) => String(e.id) === String(contentId));
-                  playSeries(String(contentId), 'series', contentName, seriesId, activeSeason ?? 1, Math.max(epIndex, 0), progressSeconds, episodeEntries);
+                  const ep = allEpisodes.find((e) => String(e.id) === String(contentId));
+                  if (ep) {
+                    playEpisode(ep, progressSeconds);
+                  } else {
+                    // Episode not in current season view — play by ID directly
+                    const epIndex = allEpisodes.findIndex((e) => String(e.id) === String(contentId));
+                    setPlayerEpisodeId(String(contentId));
+                    setPlayerEpisodeName(contentName);
+                    setPlayerStartTime(progressSeconds);
+                    setPlayerEpIndex(Math.max(epIndex, 0));
+                    setIsPlayerOpen(true);
+                  }
                 }}
               />
             )}
