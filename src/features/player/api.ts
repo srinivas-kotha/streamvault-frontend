@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@lib/api';
 import type { StreamUrlResponse, HistoryUpdateRequest } from '@shared/types/api';
 
@@ -15,11 +15,15 @@ export function useStreamUrl(type: string, id: string) {
 }
 
 export function useUpdateHistory() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ contentId, ...data }: HistoryUpdateRequest & { contentId: string }) =>
       api(`/history/${contentId}`, {
         method: 'PUT',
         body: JSON.stringify(data),
       }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['history'] });
+    },
   });
 }
