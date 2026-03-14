@@ -1,0 +1,22 @@
+#!/bin/sh
+# Gradle wrapper script
+
+APP_NAME="Gradle"
+APP_BASE_NAME=$(basename "$0")
+DIRNAME=$(dirname "$0")
+
+# Resolve JAVA_HOME
+if [ -z "$JAVA_HOME" ]; then
+    JAVACMD="java"
+else
+    JAVACMD="$JAVA_HOME/bin/java"
+fi
+
+# Determine the Java command to use to start the JVM.
+if [ ! -x "$JAVACMD" ]; then
+    echo "ERROR: JAVA_HOME is set to an invalid directory: $JAVA_HOME" >&2
+    exit 1
+fi
+
+CLASSPATH="$DIRNAME/gradle/wrapper/gradle-wrapper.jar"
+exec "$JAVACMD" -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"
