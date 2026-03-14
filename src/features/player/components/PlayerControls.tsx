@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import type { QualityLevel, VideoPlayerHandle } from './VideoPlayer';
+import type { QualityLevel, SubtitleTrack, VideoPlayerHandle } from './VideoPlayer';
 import type React from 'react';
 import { formatDuration } from '@shared/utils/formatDuration';
 import { isTVMode } from '@shared/utils/isTVMode';
@@ -174,6 +174,45 @@ function QualityDropdownItems({
   );
 }
 
+/** Subtitle dropdown items — only mounted when dropdown is open (conditional render pattern) */
+function SubtitleDropdownItems({
+  subtitleTracks,
+  currentSubtitle,
+  onSubtitleChange,
+  onClose,
+}: {
+  subtitleTracks: SubtitleTrack[];
+  currentSubtitle: number;
+  onSubtitleChange: (index: number) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="absolute bottom-full right-0 mb-2 bg-surface border border-border rounded-lg overflow-hidden shadow-card min-w-[140px]">
+      <FocusableButton
+        id="player-subtitle-off"
+        onClick={() => { onSubtitleChange(-1); onClose(); }}
+        className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
+          currentSubtitle === -1 ? 'bg-teal/15 text-teal' : 'text-text-secondary hover:bg-surface-raised'
+        }`}
+      >
+        Off
+      </FocusableButton>
+      {subtitleTracks.map((track) => (
+        <FocusableButton
+          id={`player-subtitle-${track.index}`}
+          key={track.index}
+          onClick={() => { onSubtitleChange(track.index); onClose(); }}
+          className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
+            currentSubtitle === track.index ? 'bg-teal/15 text-teal' : 'text-text-secondary hover:bg-surface-raised'
+          }`}
+        >
+          {track.label}{track.lang ? ` (${track.lang})` : ''}
+        </FocusableButton>
+      ))}
+    </div>
+  );
+}
+
 interface PlayerControlsProps {
   playerRef: React.RefObject<VideoPlayerHandle | null>;
   isPlaying: boolean;
@@ -183,6 +222,11 @@ interface PlayerControlsProps {
   qualityLevels: QualityLevel[];
   currentQuality: number;
   onQualityChange: (index: number) => void;
+  subtitleTracks?: SubtitleTrack[];
+  currentSubtitle?: number;
+  onSubtitleChange?: (index: number) => void;
+  atLiveEdge?: boolean;
+  onSeekToLiveEdge?: () => void;
   volume: number;
   isMuted: boolean;
   onVolumeChange: (v: number) => void;
@@ -203,6 +247,11 @@ export function PlayerControls({
   qualityLevels,
   currentQuality,
   onQualityChange,
+  subtitleTracks = [],
+  currentSubtitle = -1,
+  onSubtitleChange,
+  atLiveEdge = true,
+  onSeekToLiveEdge,
   volume,
   isMuted,
   onVolumeChange,
@@ -214,6 +263,7 @@ export function PlayerControls({
   visible = true,
 }: PlayerControlsProps) {
   const [showQuality, setShowQuality] = useState(false);
+  const [showSubtitles, setShowSubtitles] = useState(false);
   const progressRef = useRef<HTMLDivElement>(null);
 
   // Spatial Navigation: controls container
@@ -340,19 +390,54 @@ export function PlayerControls({
               {formatDuration(Math.floor(currentTime))} / {formatDuration(Math.floor(duration))}
             </span>
           )}
-          {isLive && (
+          {isLive && atLiveEdge && (
             <span className="flex items-center gap-1 text-xs text-error ml-1">
               <span className="w-2 h-2 bg-error rounded-full animate-pulse" />
               LIVE
             </span>
           )}
+          {isLive && !atLiveEdge && (
+            <FocusableButton
+              id="player-go-live"
+              onClick={() => onSeekToLiveEdge?.()}
+              className="flex items-center gap-1 text-xs text-white/50 hover:text-white ml-1 px-2 py-1 rounded transition-colors"
+              title="Jump to live edge"
+            >
+              <span className="w-2 h-2 bg-white/40 rounded-full" />
+              Go Live
+            </FocusableButton>
+          )}
 
           <div className="flex-1" />
+
+          {/* Subtitles / CC */}
+          {subtitleTracks.length > 0 && onSubtitleChange && (
+            <div className="relative">
+              <FocusableButton
+                id="player-subtitle-toggle"
+                onClick={() => { setShowSubtitles(!showSubtitles); setShowQuality(false); }}
+                className={`p-1.5 transition-colors ${currentSubtitle !== -1 ? 'text-teal' : 'text-white/70 hover:text-white'}`}
+                title="Subtitles"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M19 4H5c-1.11 0-2 .9-2 2v12c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-8 7H9.5v-.5h-2v3h2V13H11v1c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1zm7 0h-1.5v-.5h-2v3h2V13H18v1c0 .55-.45 1-1 1h-3c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1z" />
+                </svg>
+              </FocusableButton>
+              {showSubtitles && (
+                <SubtitleDropdownItems
+                  subtitleTracks={subtitleTracks}
+                  currentSubtitle={currentSubtitle}
+                  onSubtitleChange={onSubtitleChange}
+                  onClose={() => setShowSubtitles(false)}
+                />
+              )}
+            </div>
+          )}
 
           {/* Quality */}
           {qualityLevels.length > 1 && (
             <div className="relative">
-              <FocusableButton id="player-quality-toggle" onClick={() => setShowQuality(!showQuality)} className="p-1.5 text-white/70 hover:text-white transition-colors">
+              <FocusableButton id="player-quality-toggle" onClick={() => { setShowQuality(!showQuality); setShowSubtitles(false); }} className="p-1.5 text-white/70 hover:text-white transition-colors">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />

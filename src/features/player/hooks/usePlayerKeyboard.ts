@@ -40,6 +40,15 @@ export function usePlayerKeyboard({
   onOSD,
 }: UsePlayerKeyboardOptions) {
   const holdStateRef = useRef<SeekHoldState | null>(null);
+  const seekDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** Debounced seek — prevents rapid D-pad presses from causing stutter on Fire TV */
+  const debouncedSeek = (time: number) => {
+    if (seekDebounceRef.current) clearTimeout(seekDebounceRef.current);
+    seekDebounceRef.current = setTimeout(() => {
+      playerRef.current?.seek(time);
+    }, 80);
+  };
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -108,7 +117,7 @@ export function usePlayerKeyboard({
               accumulatedSeek: 10 * direction,
             };
             const newTime = video.currentTime + 10 * direction;
-            playerRef.current?.seek(Math.max(0, Math.min(video.duration, newTime)));
+            debouncedSeek(Math.max(0, Math.min(video.duration, newTime)));
             onOSD?.({
               type: direction > 0 ? 'seek-forward' : 'seek-back',
               timestamp: Date.now(),
@@ -123,7 +132,7 @@ export function usePlayerKeyboard({
               hold.accumulatedSeek += seekAmount;
 
               const newTime = video.currentTime + seekAmount;
-              playerRef.current?.seek(Math.max(0, Math.min(video.duration, newTime)));
+              debouncedSeek(Math.max(0, Math.min(video.duration, newTime)));
 
               if (speed > 1) {
                 onOSD?.({
@@ -209,6 +218,7 @@ export function usePlayerKeyboard({
     return () => {
       window.removeEventListener('keydown', handleKeyDown, { capture: true });
       window.removeEventListener('keyup', handleKeyUp, { capture: true });
+      if (seekDebounceRef.current) clearTimeout(seekDebounceRef.current);
     };
   }, [playerRef, isLive, onNext, onPrev, onMuteToggle, onVolumeUp, onVolumeDown, onClose, onOSD]);
 }
