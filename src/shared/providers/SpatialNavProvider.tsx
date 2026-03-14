@@ -66,15 +66,21 @@ export function SpatialNavProvider({ children }: SpatialNavProviderProps) {
       // norigin's onEnterPress can be unreliable with shouldUseNativeEvents:true on <div> cards.
       // Also handles Fire TV DPAD_CENTER (keyCode 23).
       // Uses data-focus-key attribute set by useSpatialFocusable to find the focused DOM element.
+      // SKIP if the focused element wraps an input — let norigin's onEnterPress handle it
+      // so the input can receive DOM focus naturally.
       if (isEnter && !isInInput) {
         const currentKey = getCurrentFocusKey();
         if (currentKey) {
           const focusedEl = document.querySelector(`[data-focus-key="${CSS.escape(currentKey)}"]`) as HTMLElement;
           if (focusedEl) {
-            focusedEl.click();
-            e.preventDefault();
-            e.stopPropagation();
-            return;
+            // Don't click() on elements that wrap inputs — it steals focus from the input
+            const hasInput = focusedEl.querySelector('input, textarea, select');
+            if (!hasInput) {
+              focusedEl.click();
+              e.preventDefault();
+              e.stopPropagation();
+              return;
+            }
           }
         }
       }
