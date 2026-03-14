@@ -10,11 +10,19 @@ export interface QualityLevel {
   label: string;
 }
 
+export interface SubtitleTrack {
+  index: number;
+  lang: string;
+  label: string;
+}
+
 export interface VideoPlayerHandle {
   play: () => void;
   pause: () => void;
   seek: (time: number) => void;
   setQuality: (index: number) => void;
+  setSubtitleTrack: (index: number) => void;
+  seekToLiveEdge: () => void;
   getVideo: () => HTMLVideoElement | null;
   toggleFullscreen: () => void;
   togglePiP: () => Promise<void>;
@@ -30,18 +38,21 @@ interface VideoPlayerProps {
   onEnded?: () => void;
   onError?: (error: string) => void;
   onQualityLevelsReady?: (levels: QualityLevel[]) => void;
+  onSubtitleTracksReady?: (tracks: SubtitleTrack[]) => void;
+  onLiveEdgeChange?: (atLiveEdge: boolean) => void;
   onPlayStateChange?: (playing: boolean) => void;
 }
 
 export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
   function VideoPlayer(
-    { url, isLive, format, autoPlay = true, startTime = 0, onTimeUpdate, onEnded, onError, onQualityLevelsReady, onPlayStateChange },
+    { url, isLive, format, autoPlay = true, startTime = 0, onTimeUpdate, onEnded, onError, onQualityLevelsReady, onSubtitleTracksReady, onLiveEdgeChange, onPlayStateChange },
     ref,
   ) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<HlsType | null>(null);
     const mpegtsRef = useRef<mpegtsType.Player | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const lastAtLiveEdgeRef = useRef(true);
     const [isReady, setIsReady] = useState(false);
 
     const destroyPlayers = useCallback(() => {
@@ -65,7 +76,19 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
         if (videoRef.current) videoRef.current.currentTime = time;
       },
       setQuality: (index: number) => {
-        if (hlsRef.current) hlsRef.current.currentLevel = index;
+        if (hlsRef.current) hlsRef.current.nextLevel = index;
+      },
+      setSubtitleTrack: (index: number) => {
+        if (hlsRef.current) hlsRef.current.subtitleTrack = index;
+      },
+      seekToLiveEdge: () => {
+        const video = videoRef.current;
+        if (!video) return;
+        if (video.seekable.length) {
+          video.currentTime = video.seekable.end(video.seekable.length - 1) - 2;
+        } else if (hlsRef.current?.liveSyncPosition) {
+          video.currentTime = hlsRef.current.liveSyncPosition;
+        }
       },
       getVideo: () => videoRef.current,
       toggleFullscreen: () => {
@@ -162,10 +185,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
             lowLatencyMode: true,
             liveSyncDuration: 3,
             liveMaxLatencyDuration: 10,
-            liveBackBufferLength: 30,
-            backBufferLength: 30,
+            liveBackBufferLength: isTVMode ? 15 : 30,
+            backBufferLength: isTVMode ? 15 : 30,
           } : {
-            backBufferLength: 60,
+            backBufferLength: isTVMode ? 20 : 60,
           }),
         });
         hlsRef.current = hls;
@@ -187,6 +210,17 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
           }
           if (startTime > 0 && !isLive) video.currentTime = startTime;
           if (autoPlay) video.play().catch(() => {});
+        });
+
+        // Subtitle track discovery
+        hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, () => {
+          if (cancelled || !onSubtitleTracksReady) return;
+          const tracks: SubtitleTrack[] = hls.subtitleTracks.map((t, i) => ({
+            index: i,
+            lang: t.lang || '',
+            label: t.name || `Track ${i + 1}`,
+          }));
+          onSubtitleTracksReady(tracks);
         });
 
         hls.on(Hls.Events.ERROR, (_event, data) => {
@@ -303,7 +337,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
         video.onerror = null;
       };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [url, format, isLive, autoPlay, startTime, onError, onQualityLevelsReady, destroyPlayers]);
+    }, [url, format, isLive, autoPlay, startTime, onError, onQualityLevelsReady, onSubtitleTracksReady, destroyPlayers]);
 
     useEffect(() => {
       const video = videoRef.current;
@@ -312,6 +346,28 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
       video.addEventListener('timeupdate', handler);
       return () => video.removeEventListener('timeupdate', handler);
     }, [onTimeUpdate]);
+
+    // Live edge detection — fires onLiveEdgeChange when user seeks away from or back to live edge
+    useEffect(() => {
+      const video = videoRef.current;
+      if (!video || !isLive || !onLiveEdgeChange) return;
+      const handler = () => {
+        let atEdge = true;
+        if (video.seekable.length) {
+          const liveEdge = video.seekable.end(video.seekable.length - 1);
+          atEdge = liveEdge - video.currentTime < 15;
+        } else if (hlsRef.current?.liveSyncPosition) {
+          atEdge = hlsRef.current.liveSyncPosition - video.currentTime < 15;
+        }
+        // Only fire callback when state actually changes
+        if (atEdge !== lastAtLiveEdgeRef.current) {
+          lastAtLiveEdgeRef.current = atEdge;
+          onLiveEdgeChange(atEdge);
+        }
+      };
+      video.addEventListener('timeupdate', handler);
+      return () => video.removeEventListener('timeupdate', handler);
+    }, [isLive, onLiveEdgeChange]);
 
     useEffect(() => {
       const video = videoRef.current;

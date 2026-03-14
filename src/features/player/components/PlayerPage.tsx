@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { useStreamUrl } from '../api';
-import { VideoPlayer, type VideoPlayerHandle, type QualityLevel } from './VideoPlayer';
+import { VideoPlayer, type VideoPlayerHandle, type QualityLevel, type SubtitleTrack } from './VideoPlayer';
 import { PlayerControls } from './PlayerControls';
 import { PlayerOSD, type OSDAction } from './PlayerOSD';
 import { usePlayerKeyboard } from '../hooks/usePlayerKeyboard';
@@ -44,6 +44,9 @@ export function PlayerPage({
   const [duration, setDuration] = useState(0);
   const [qualityLevels, setQualityLevels] = useState<QualityLevel[]>([]);
   const [currentQuality, setCurrentQuality] = useState(-1);
+  const [subtitleTracks, setSubtitleTracks] = useState<SubtitleTrack[]>([]);
+  const [currentSubtitle, setCurrentSubtitle] = useState(-1);
+  const [atLiveEdge, setAtLiveEdge] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [osdAction, setOsdAction] = useState<OSDAction | null>(null);
 
@@ -79,6 +82,11 @@ export function PlayerPage({
     playerRef.current?.setQuality(index);
   }, []);
 
+  const handleSubtitleChange = useCallback((index: number) => {
+    setCurrentSubtitle(index);
+    playerRef.current?.setSubtitleTrack(index);
+  }, []);
+
   const handleVolumeUp = useCallback(() => setVolume(Math.min(1, volume + 0.1)), [volume, setVolume]);
   const handleVolumeDown = useCallback(() => setVolume(Math.max(0, volume - 0.1)), [volume, setVolume]);
 
@@ -109,6 +117,13 @@ export function PlayerPage({
     });
     showControls();
   }, [showControls]);
+
+  // Clean up controls timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    };
+  }, []);
 
   // Show controls when paused
   useEffect(() => {
@@ -236,6 +251,8 @@ export function PlayerPage({
           onEnded={onNext}
           onError={setError}
           onQualityLevelsReady={setQualityLevels}
+          onSubtitleTracksReady={setSubtitleTracks}
+          onLiveEdgeChange={setAtLiveEdge}
           onPlayStateChange={setIsPlaying}
         />
         <PlayerControls
@@ -251,6 +268,11 @@ export function PlayerPage({
           isMuted={isMuted}
           onVolumeChange={setVolume}
           onMuteToggle={toggleMute}
+          subtitleTracks={subtitleTracks}
+          currentSubtitle={currentSubtitle}
+          onSubtitleChange={handleSubtitleChange}
+          atLiveEdge={atLiveEdge}
+          onSeekToLiveEdge={() => playerRef.current?.seekToLiveEdge()}
           hasNext={hasNext}
           hasPrev={hasPrev}
           onNext={onNext}

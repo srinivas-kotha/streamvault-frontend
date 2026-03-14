@@ -22,6 +22,8 @@ function createMockPlayer(overrides: Partial<{ paused: boolean; currentTime: num
       togglePiP: vi.fn().mockResolvedValue(undefined),
       seek: vi.fn(),
       setQuality: vi.fn(),
+      setSubtitleTrack: vi.fn(),
+      seekToLiveEdge: vi.fn(),
     } satisfies VideoPlayerHandle,
   } as React.RefObject<VideoPlayerHandle | null>;
 }
