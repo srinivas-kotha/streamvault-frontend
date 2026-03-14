@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { init, setFocus, getCurrentFocusKey } from '@noriginmedia/norigin-spatial-navigation';
+import { init, setFocus, getCurrentFocusKey, setKeyMap } from '@noriginmedia/norigin-spatial-navigation';
 import { useUIStore } from '@lib/store';
 
 // Check URL param for debug mode (e.g. ?debug=spatial)
@@ -17,6 +17,9 @@ init({
   throttle: 100,
   throttleKeypresses: true,
 });
+
+// Extend Enter key mapping to include Fire TV DPAD_CENTER (keyCode 23)
+setKeyMap({ enter: [13, 23, 'Enter'] });
 
 interface SpatialNavProviderProps {
   children: ReactNode;
@@ -52,10 +55,25 @@ export function SpatialNavProvider({ children }: SpatialNavProviderProps) {
         e.preventDefault();  // Prevent native scroll — norigin handles focus movement, card onFocus scrolls into view
       }
 
-      const isNavKey = isArrow || ['Enter', 'Escape', 'Backspace'].includes(e.key);
+      const isEnter = e.key === 'Enter' || e.keyCode === 13 || e.keyCode === 23;
+      const isNavKey = isArrow || isEnter || ['Escape', 'Backspace'].includes(e.key);
 
       if (isNavKey) {
         setInputMode('keyboard');
+      }
+
+      // Enter/Select: click the focused card directly.
+      // norigin's onEnterPress relies on native events with shouldUseNativeEvents:true,
+      // but cards are <div> elements (not <button>), so native Enter doesn't trigger click.
+      // Also handles Fire TV DPAD_CENTER (keyCode 23) which norigin may not map.
+      if (isEnter && !isInInput) {
+        const focusedEl = document.querySelector('[data-focused="true"]') as HTMLElement;
+        if (focusedEl) {
+          focusedEl.click();
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
       }
 
       // If in an input and arrow pressed, blur so spatial nav takes over

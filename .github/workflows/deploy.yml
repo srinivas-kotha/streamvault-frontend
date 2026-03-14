@@ -13,18 +13,14 @@ jobs:
     environment: production
     steps:
       - name: Deploy to VPS
-        uses: nick-fields/retry@v3
+        uses: appleboy/ssh-action@v1
         with:
-          max_attempts: 3
-          timeout_minutes: 10
-          retry_wait_seconds: 30
-          command: |
-            which ssh-agent || sudo apt-get install -y openssh-client
-            eval $(ssh-agent -s)
-            echo "${{ secrets.SSH_KEY }}" | tr -d '\r' | ssh-add -
-            mkdir -p ~/.ssh
-            ssh-keyscan -t rsa ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
-            ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'DEPLOY_SCRIPT'
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          timeout: 60s
+          command_timeout: 8m
+          script: |
             set -e
             echo "Pulling latest code..."
             cd ~/streamvault-frontend
@@ -49,18 +45,13 @@ jobs:
             docker logs streamvault_frontend --tail 50
             docker restart streamvault_frontend
             exit 1
-            DEPLOY_SCRIPT
 
       - name: Cleanup
         if: success()
-        uses: nick-fields/retry@v3
+        uses: appleboy/ssh-action@v1
         with:
-          max_attempts: 2
-          timeout_minutes: 3
-          retry_wait_seconds: 15
-          command: |
-            eval $(ssh-agent -s)
-            echo "${{ secrets.SSH_KEY }}" | tr -d '\r' | ssh-add -
-            mkdir -p ~/.ssh
-            ssh-keyscan -t rsa ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
-            ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} 'docker image prune -f'
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          timeout: 60s
+          script: docker image prune -f
