@@ -93,7 +93,8 @@ export function SpatialNavProvider({ children }: SpatialNavProviderProps) {
       // Back button handler (TV remotes: Escape, Fire TV: 4, Tizen: 10009, LG: 461)
       if (e.key === 'Escape' || e.keyCode === 4 || e.keyCode === 10009 || e.keyCode === 461) {
         // Skip if player is active — usePlayerKeyboard handles back during playback
-        if (usePlayerStore.getState().currentStreamId) return;
+        // Check both global store (FullscreenPlayer) and suppressArrowNav (inline PlayerPage)
+        if (usePlayerStore.getState().currentStreamId || useUIStore.getState().suppressArrowNav) return;
         // Back navigation — let the app's router handle it
         if (e.key !== 'Escape') {
           window.history.back();
