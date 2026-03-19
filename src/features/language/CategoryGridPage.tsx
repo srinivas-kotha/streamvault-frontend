@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@lib/api';
+import { STALE_TIMES } from '@lib/queryConfig';
 import { useVODCategories } from '@features/vod/api';
 import { useSeriesCategories } from '@features/series/api';
 import { useLiveCategories } from '@features/live/api';
@@ -57,21 +58,21 @@ export function CategoryGridPage() {
     queryKey: ['vod', 'streams', categoryId],
     queryFn: () => api<XtreamVODStream[]>(`/vod/streams/${categoryId}`),
     enabled: contentType === 'vod' && !!categoryId,
-    staleTime: 2 * 60 * 60 * 1000,
+    staleTime: STALE_TIMES.streams,
   });
 
   const { data: seriesList, isLoading: seriesLoading } = useQuery({
     queryKey: ['series', 'list', categoryId],
     queryFn: () => api<XtreamSeriesItem[]>(`/series/list/${categoryId}`),
     enabled: contentType === 'series' && !!categoryId,
-    staleTime: 2 * 60 * 60 * 1000,
+    staleTime: STALE_TIMES.streams,
   });
 
   const { data: liveStreams, isLoading: liveLoading } = useQuery({
     queryKey: ['live', 'streams', categoryId],
     queryFn: () => api<XtreamLiveStream[]>(`/live/streams/${categoryId}`),
     enabled: contentType === 'live' && !!categoryId,
-    staleTime: 30 * 60 * 1000,
+    staleTime: STALE_TIMES.liveStreams,
   });
 
   const isLoading = vodLoading || seriesLoading || liveLoading;

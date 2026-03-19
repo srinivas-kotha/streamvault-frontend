@@ -7,7 +7,6 @@ import {
   type FocusableComponentLayout,
   type FocusDetails,
 } from '@noriginmedia/norigin-spatial-navigation';
-import { useUIStore } from '@lib/store';
 
 export { FocusContext, setFocus, doesFocusableExist };
 
@@ -35,8 +34,6 @@ interface UseSpatialFocusableOptions {
  * (cards, buttons, inputs). Adds mouse hover → focusSelf and showFocusRing.
  */
 export function useSpatialFocusable(options: UseSpatialFocusableOptions = {}) {
-  const inputMode = useUIStore((s) => s.inputMode);
-
   const { ref, focused, focusSelf, focusKey, hasFocusedChild } = useFocusable({
     focusKey: options.focusKey,
     focusable: options.focusable ?? true,
@@ -58,8 +55,10 @@ export function useSpatialFocusable(options: UseSpatialFocusableOptions = {}) {
     focusSelf();
   }, [focusSelf]);
 
-  // Only show focus ring in keyboard mode
-  const showFocusRing = focused && inputMode === 'keyboard';
+  // Only show focus ring in keyboard mode.
+  // Read from data attribute instead of Zustand to avoid re-render cascade
+  // when inputMode changes (~110 subscribers would re-render otherwise).
+  const showFocusRing = focused && document.documentElement.dataset.inputMode === 'keyboard';
 
   return {
     ref,

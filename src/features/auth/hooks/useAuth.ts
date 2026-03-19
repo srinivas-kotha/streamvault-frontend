@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
+import { STALE_TIMES } from '@lib/queryConfig';
 import { login, logout, checkAuth } from '../api';
 import { useAuthStore } from '@lib/store';
 
@@ -21,7 +22,7 @@ export function useAuthCheck() {
       return ok;
     },
     retry: false,
-    staleTime: 60 * 1000,
+    staleTime: STALE_TIMES.auth,
   });
 }
 

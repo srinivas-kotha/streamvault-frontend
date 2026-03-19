@@ -2,6 +2,8 @@ import { createRootRoute, Outlet } from '@tanstack/react-router';
 import { usePlayerStore } from '@lib/store';
 import { PlayerPage } from '@features/player/components/PlayerPage';
 import { isTVMode } from '@shared/utils/isTVMode';
+import { ErrorBoundary } from '@shared/components/ErrorBoundary';
+import { ToastContainer } from '@shared/components/Toast';
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -54,8 +56,11 @@ function RootLayout() {
   return (
     <>
       {!isTVMode && <div className="grain-overlay" />}
-      <Outlet />
+      <ErrorBoundary>
+        <Outlet />
+      </ErrorBoundary>
       <FullscreenPlayer />
+      <ToastContainer />
     </>
   );
 }

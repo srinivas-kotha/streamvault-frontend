@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { init, setFocus, getCurrentFocusKey, setKeyMap } from '@noriginmedia/norigin-spatial-navigation';
 import { useUIStore, usePlayerStore } from '@lib/store';
+import { isTVMode } from '@shared/utils/isTVMode';
 
 // Check URL param for debug mode (e.g. ?debug=spatial)
 const isSpatialDebug = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debug') === 'spatial';
@@ -20,6 +21,11 @@ init({
 
 // Extend Enter key mapping to include Fire TV DPAD_CENTER (keyCode 23)
 setKeyMap({ enter: [13, 23, 'Enter'] });
+
+// Initialize data attribute for inputMode (read by useSpatialFocusable without Zustand subscription)
+if (typeof document !== 'undefined') {
+  document.documentElement.dataset.inputMode = 'mouse';
+}
 
 interface SpatialNavProviderProps {
   children: ReactNode;
@@ -48,8 +54,8 @@ export function SpatialNavProvider({ children }: SpatialNavProviderProps) {
 
       if (isInInput && !isArrow) return;
 
-      // When suppressArrowNav is true (player active in TV mode), skip arrow handling
-      if (isArrow && useUIStore.getState().suppressArrowNav) return;
+      // When player is active in TV mode, skip arrow handling — usePlayerKeyboard captures seek/volume
+      if (isArrow && isTVMode && usePlayerStore.getState().currentStreamId) return;
 
       if (isArrow) {
         e.preventDefault();  // Prevent native scroll — norigin handles focus movement, card onFocus scrolls into view
@@ -59,6 +65,7 @@ export function SpatialNavProvider({ children }: SpatialNavProviderProps) {
       const isNavKey = isArrow || isEnter || ['Escape', 'Backspace'].includes(e.key);
 
       if (isNavKey) {
+        document.documentElement.dataset.inputMode = 'keyboard';
         setInputMode('keyboard');
       }
 
@@ -93,8 +100,7 @@ export function SpatialNavProvider({ children }: SpatialNavProviderProps) {
       // Back button handler (TV remotes: Escape, Fire TV: 4, Tizen: 10009, LG: 461)
       if (e.key === 'Escape' || e.keyCode === 4 || e.keyCode === 10009 || e.keyCode === 461) {
         // Skip if player is active — usePlayerKeyboard handles back during playback
-        // Check both global store (FullscreenPlayer) and suppressArrowNav (inline PlayerPage)
-        if (usePlayerStore.getState().currentStreamId || useUIStore.getState().suppressArrowNav) return;
+        if (usePlayerStore.getState().currentStreamId) return;
         // Back navigation — let the app's router handle it
         if (e.key !== 'Escape') {
           window.history.back();
@@ -116,6 +122,7 @@ export function SpatialNavProvider({ children }: SpatialNavProviderProps) {
     }
 
     function handleMouseMove() {
+      document.documentElement.dataset.inputMode = 'mouse';
       setInputMode('mouse');
     }
 

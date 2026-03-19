@@ -1,12 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@lib/api';
+import { STALE_TIMES } from '@lib/queryConfig';
+import { useToastStore } from '@lib/toastStore';
 import type { DbWatchHistory } from '@shared/types/api';
 
 export function useWatchHistory() {
   return useQuery({
     queryKey: ['history'],
     queryFn: () => api<DbWatchHistory[]>('/history'),
-    staleTime: 2 * 60 * 1000, // 2 min
+    staleTime: STALE_TIMES.history,
   });
 }
 
@@ -16,6 +18,9 @@ export function useClearHistory() {
     mutationFn: () => api<void>('/history', { method: 'DELETE' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['history'] });
+    },
+    onError: () => {
+      useToastStore.getState().addToast('Failed to clear history', 'error');
     },
   });
 }
@@ -28,6 +33,9 @@ export function useRemoveHistoryItem() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['history'] });
+    },
+    onError: () => {
+      useToastStore.getState().addToast('Failed to remove history item', 'error');
     },
   });
 }

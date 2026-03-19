@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@lib/api';
+import { STALE_TIMES } from '@lib/queryConfig';
 import type { XtreamCategory, XtreamLiveStream, XtreamEPGItem } from '@shared/types/api';
 
 export function useFeaturedChannels() {
   return useQuery({
     queryKey: ['live', 'featured'],
     queryFn: () => api<XtreamLiveStream[]>('/live/featured'),
-    staleTime: 30 * 60 * 1000, // 30 min
+    staleTime: STALE_TIMES.liveStreams,
   });
 }
 
@@ -14,7 +15,7 @@ export function useLiveCategories() {
   return useQuery({
     queryKey: ['live', 'categories'],
     queryFn: () => api<XtreamCategory[]>('/live/categories'),
-    staleTime: 60 * 60 * 1000, // 1 hour (matches backend cache)
+    staleTime: STALE_TIMES.liveCategories,
   });
 }
 
@@ -23,7 +24,7 @@ export function useLiveStreams(categoryId: string) {
     queryKey: ['live', 'streams', categoryId],
     queryFn: () => api<XtreamLiveStream[]>(`/live/streams/${categoryId}`),
     enabled: !!categoryId,
-    staleTime: 30 * 60 * 1000, // 30 min
+    staleTime: STALE_TIMES.liveStreams,
   });
 }
 
@@ -32,6 +33,6 @@ export function useEPG(streamId: number) {
     queryKey: ['live', 'epg', streamId],
     queryFn: () => api<XtreamEPGItem[]>(`/live/epg/${streamId}`),
     enabled: streamId > 0,
-    staleTime: 15 * 60 * 1000, // 15 min
+    staleTime: STALE_TIMES.epg,
   });
 }

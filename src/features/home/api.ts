@@ -1,9 +1,10 @@
 import { useMemo } from 'react';
-import { useQueries } from '@tanstack/react-query';
 import { api } from '@lib/api';
+import { STALE_TIMES } from '@lib/queryConfig';
 import { useVODCategories } from '@features/vod/api';
 import { useSeriesCategories } from '@features/series/api';
 import { groupCategoriesByLanguage } from '@shared/utils/categoryParser';
+import { useContentRailData } from '@shared/hooks/useContentRailData';
 import type {
   XtreamVODStream,
   XtreamSeriesItem,
@@ -12,15 +13,6 @@ import type {
 // Re-export from feature modules to avoid duplicate hook definitions
 export { useWatchHistory } from '@features/history/api';
 export { useFavorites } from '@features/favorites/api';
-
-// --- Helpers ---
-
-function parseAdded(val: string): number {
-  const num = Number(val);
-  if (!isNaN(num) && num > 1e9) return num; // Unix timestamp
-  const parsed = Date.parse(val);
-  return isNaN(parsed) ? 0 : parsed / 1000;
-}
 
 const ITEMS_PER_RAIL = 20;
 
@@ -38,38 +30,18 @@ export function useLanguageMovieRail(language: string) {
     return group.movies.map((c) => c.id);
   }, [vodCategories, language]);
 
-  // Fetch ALL categories for this language in parallel
-  const queries = useQueries({
-    queries: categoryIds.map((catId) => ({
-      queryKey: ['vod', 'streams', catId],
-      queryFn: () => api<XtreamVODStream[]>(`/vod/streams/${catId}`),
-      enabled: !categoriesLoading && categoryIds.length > 0,
-      staleTime: 2 * 60 * 60 * 1000,
-    })),
+  const { items, isLoading: railLoading } = useContentRailData<XtreamVODStream>({
+    categoryIds,
+    fetchFn: (catId) => api<XtreamVODStream[]>(`/vod/streams/${catId}`),
+    queryKeyPrefix: ['vod', 'streams'],
+    dedupeKey: 'stream_id',
+    sortBy: 'added',
+    limit: ITEMS_PER_RAIL,
+    staleTime: STALE_TIMES.streams,
+    enabled: !categoriesLoading && categoryIds.length > 0,
   });
 
-  const isLoading = categoriesLoading || queries.some((q) => q.isLoading);
-
-  // Merge, dedupe by stream_id, sort by added DESC, take top N
-  const items = useMemo<XtreamVODStream[]>(() => {
-    const all: XtreamVODStream[] = [];
-    for (const q of queries) {
-      if (q.data) all.push(...q.data);
-    }
-    if (all.length === 0) return [];
-
-    const seen = new Set<number>();
-    const unique = all.filter((item) => {
-      if (seen.has(item.stream_id)) return false;
-      seen.add(item.stream_id);
-      return true;
-    });
-
-    unique.sort((a, b) => parseAdded(b.added) - parseAdded(a.added));
-    return unique.slice(0, ITEMS_PER_RAIL);
-  }, [queries]);
-
-  return { items, isLoading };
+  return { items, isLoading: categoriesLoading || railLoading };
 }
 
 // --- Language Series Rail ---
@@ -94,47 +66,32 @@ export function useLanguageSeriesRail(language: string) {
     }));
   }, [seriesCategories, language]);
 
-  // Fetch ALL categories for this language in parallel
-  const queries = useQueries({
-    queries: categoryDefs.map((def) => ({
-      queryKey: ['series', 'list', def.id],
-      queryFn: () => api<XtreamSeriesItem[]>(`/series/list/${def.id}`),
-      enabled: !categoriesLoading && categoryDefs.length > 0,
-      staleTime: 2 * 60 * 60 * 1000,
-    })),
+  const categoryIds = useMemo(() => categoryDefs.map((d) => d.id), [categoryDefs]);
+
+  const { items: rawItems, isLoading: railLoading } = useContentRailData<XtreamSeriesItem>({
+    categoryIds,
+    fetchFn: (catId) => api<XtreamSeriesItem[]>(`/series/list/${catId}`),
+    queryKeyPrefix: ['series', 'list'],
+    dedupeKey: 'series_id',
+    sortBy: 'added', // Uses last_modified via the fallback in getSortValue
+    limit: ITEMS_PER_RAIL,
+    staleTime: STALE_TIMES.streams,
+    enabled: !categoriesLoading && categoryDefs.length > 0,
   });
 
-  const isLoading = categoriesLoading || queries.some((q) => q.isLoading);
-
-  // Merge, dedupe by series_id, sort by last_modified DESC, take top N
-  // Attach channelName from the category definition
+  // Enrich items with channelName from the category definitions
   const items = useMemo<SeriesWithChannel[]>(() => {
-    const all: SeriesWithChannel[] = [];
-    for (let i = 0; i < categoryDefs.length; i++) {
-      const data = queries[i]?.data;
-      if (!data) continue;
-      const channelName = categoryDefs[i]!.channelName;
-      for (const item of data) {
-        all.push({ ...item, channelName });
-      }
+    // Build a lookup from category id to channel name
+    const channelMap = new Map<number | string, string>();
+    for (const def of categoryDefs) {
+      channelMap.set(def.id, def.channelName);
     }
-    if (all.length === 0) return [];
 
-    const seen = new Set<number>();
-    const unique = all.filter((item) => {
-      if (seen.has(item.series_id)) return false;
-      seen.add(item.series_id);
-      return true;
-    });
+    return rawItems.map((item) => ({
+      ...item,
+      channelName: channelMap.get(item.category_id) ?? channelMap.get(Number(item.category_id)),
+    }));
+  }, [rawItems, categoryDefs]);
 
-    unique.sort((a, b) => {
-      const aDate = Number(a.last_modified) || 0;
-      const bDate = Number(b.last_modified) || 0;
-      return bDate - aDate;
-    });
-
-    return unique.slice(0, ITEMS_PER_RAIL);
-  }, [queries, categoryDefs]);
-
-  return { items, isLoading };
+  return { items, isLoading: categoriesLoading || railLoading };
 }

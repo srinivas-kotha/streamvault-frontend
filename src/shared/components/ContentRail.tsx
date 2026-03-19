@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from 'react';
+import { memo, useRef, type ReactNode } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useSpatialFocusable, useSpatialContainer, FocusContext } from '@shared/hooks/useSpatialNav';
 import { HorizontalScroll } from './HorizontalScroll';
@@ -55,17 +55,17 @@ interface ContentRailProps {
  * to avoid the norigin conditional render anti-pattern
  * (calling useFocusable then returning null registers a ghost node).
  */
-export function ContentRail(props: ContentRailProps) {
+export const ContentRail = memo(function ContentRail(props: ContentRailProps) {
   const { isEmpty = false, isLoading = false } = props;
 
   // Return null BEFORE any hooks are called — prevents ghost focus nodes
   if (isEmpty && !isLoading) return null;
 
   return <ContentRailInner {...props} />;
-}
+});
 
 /** Inner component — only mounts when rail has content or is loading */
-function ContentRailInner({
+const ContentRailInner = memo(function ContentRailInner({
   title,
   seeAllTo,
   children,
@@ -115,4 +115,4 @@ function ContentRailInner({
       </section>
     </FocusContext.Provider>
   );
-}
+});

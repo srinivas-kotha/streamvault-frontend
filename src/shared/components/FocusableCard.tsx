@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react';
 import { ContentCard } from './ContentCard';
+import { FocusableElement } from './FocusableElement';
 
 interface FocusableCardProps {
   image: string;
@@ -34,8 +35,14 @@ export function FocusableCard({
   focusKey,
   priority,
 }: FocusableCardProps) {
+  const cardFocusKey = focusKey || `card-${title.replace(/\s+/g, '-').toLowerCase()}`;
+
   return (
-    <div className="rail-item flex-shrink-0">
+    <FocusableElement
+      focusKey={`rail-${cardFocusKey}`}
+      className="rail-item flex-shrink-0"
+      onClick={onClick}
+    >
       <ContentCard
         image={image}
         title={title}
@@ -56,6 +63,6 @@ export function FocusableCard({
         aspectRatio={aspectRatio}
         priority={priority}
       />
-    </div>
+    </FocusableElement>
   );
 }
