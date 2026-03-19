@@ -28,9 +28,6 @@ interface UIState {
   setSidebarOpen: (open: boolean) => void;
   inputMode: 'mouse' | 'keyboard';
   setInputMode: (mode: 'mouse' | 'keyboard') => void;
-  /** When true, SpatialNavProvider skips arrow key handling (e.g. player captures arrows for seek/volume) */
-  suppressArrowNav: boolean;
-  setSuppressArrowNav: (suppress: boolean) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -39,8 +36,6 @@ export const useUIStore = create<UIState>((set) => ({
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   inputMode: 'mouse' as const,
   setInputMode: (mode) => set({ inputMode: mode }),
-  suppressArrowNav: false,
-  setSuppressArrowNav: (suppress) => set({ suppressArrowNav: suppress }),
 }));
 
 export type StreamType = 'live' | 'vod' | 'series';
@@ -55,7 +50,6 @@ interface PlayerState {
   currentStreamType: StreamType | null;
   currentStreamName: string | null;
   startTime: number;
-  isPlaying: boolean;
   volume: number;
   isMuted: boolean;
   // Series context
@@ -70,7 +64,6 @@ interface PlayerState {
   playNextEpisode: () => void;
   playPrevEpisode: () => void;
   stop: () => void;
-  togglePlay: () => void;
   toggleMute: () => void;
   setVolume: (v: number) => void;
   setEpisodeIndex: (idx: number) => void;
@@ -81,7 +74,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   currentStreamType: null,
   currentStreamName: null,
   startTime: 0,
-  isPlaying: false,
   volume: 1,
   isMuted: false,
   seriesId: null,
@@ -94,7 +86,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       currentStreamType: type,
       currentStreamName: name,
       startTime,
-      isPlaying: true,
       seriesId: null,
       seasonNumber: null,
       episodeIndex: null,
@@ -107,7 +98,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       currentStreamType: type,
       currentStreamName: name,
       startTime,
-      isPlaying: true,
       seriesId,
       seasonNumber: season,
       episodeIndex: epIndex,
@@ -125,7 +115,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       currentStreamName: next.name,
       startTime: 0,
       episodeIndex: nextIdx,
-      isPlaying: true,
     });
   },
   playPrevEpisode: () => {
@@ -139,7 +128,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       currentStreamName: prev.name,
       startTime: 0,
       episodeIndex: prevIdx,
-      isPlaying: true,
     });
   },
   stop: () =>
@@ -148,14 +136,15 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       currentStreamType: null,
       currentStreamName: null,
       startTime: 0,
-      isPlaying: false,
       seriesId: null,
       seasonNumber: null,
       episodeIndex: null,
       episodeList: [],
     }),
-  togglePlay: () => set((s) => ({ isPlaying: !s.isPlaying })),
   toggleMute: () => set((s) => ({ isMuted: !s.isMuted })),
   setVolume: (v) => set({ volume: v, isMuted: v === 0 }),
   setEpisodeIndex: (idx) => set({ episodeIndex: idx }),
 }));
+
+/** Derived selector: true when a stream is loaded in the player */
+export const useIsPlayerActive = () => usePlayerStore((s) => !!s.currentStreamId);

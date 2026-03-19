@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useCallback, forwardRef, type ReactNode } from 'react';
+import { memo, useRef, useState, useEffect, useCallback, forwardRef, type ReactNode } from 'react';
 import { useUIStore } from '@lib/store';
 import { isTVMode } from '@shared/utils/isTVMode';
 
@@ -25,7 +25,7 @@ interface HorizontalScrollProps {
   className?: string;
 }
 
-export const HorizontalScroll = forwardRef<HTMLDivElement, HorizontalScrollProps>(
+export const HorizontalScroll = memo(forwardRef<HTMLDivElement, HorizontalScrollProps>(
   function HorizontalScroll({ children, className = '' }, forwardedRef) {
     const internalRef = useRef<HTMLDivElement>(null);
     const scrollRef = (forwardedRef as React.RefObject<HTMLDivElement | null>) ?? internalRef;
@@ -89,4 +89,4 @@ export const HorizontalScroll = forwardRef<HTMLDivElement, HorizontalScrollProps
       </div>
     );
   }
-);
+));

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { api } from '@lib/api';
+import { STALE_TIMES } from '@lib/queryConfig';
 import { useLiveCategories } from '@features/live/api';
 import { useVODCategories } from '@features/vod/api';
 import { useSeriesCategories } from '@features/series/api';
@@ -41,7 +42,7 @@ export function useLanguageMovieRails(language: string, limit = 20) {
       queryKey: ['vod', 'streams', cat.id],
       queryFn: () => api<XtreamVODStream[]>(`/vod/streams/${cat.id}`),
       enabled: isReady,
-      staleTime: 2 * 60 * 60 * 1000,
+      staleTime: STALE_TIMES.streams,
       select: (data: XtreamVODStream[]) => ({
         category: cat,
         items: data.slice(0, limit),
@@ -68,7 +69,7 @@ export function useLanguageAllMovies(language: string) {
       queryKey: ['vod', 'streams', cat.id],
       queryFn: () => api<XtreamVODStream[]>(`/vod/streams/${cat.id}`),
       enabled: isReady,
-      staleTime: 2 * 60 * 60 * 1000,
+      staleTime: STALE_TIMES.streams,
     })),
   });
 
@@ -115,7 +116,7 @@ export function useLanguageSeriesRails(language: string, limit = 20) {
       queryKey: ['series', 'list', cat.id],
       queryFn: () => api<XtreamSeriesItem[]>(`/series/list/${cat.id}`),
       enabled: isReady,
-      staleTime: 2 * 60 * 60 * 1000,
+      staleTime: STALE_TIMES.streams,
       select: (data: XtreamSeriesItem[]) => ({
         category: cat,
         items: data.slice(0, limit),
@@ -142,7 +143,7 @@ export function useLanguageLiveChannels(language: string) {
       queryKey: ['live', 'streams', cat.id],
       queryFn: () => api<XtreamLiveStream[]>(`/live/streams/${cat.id}`),
       enabled: isReady,
-      staleTime: 30 * 60 * 1000,
+      staleTime: STALE_TIMES.liveStreams,
       select: (data: XtreamLiveStream[]) => ({
         category: cat,
         items: data,

@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { STALE_TIMES } from '@lib/queryConfig';
 
 /**
  * Prefetches a query when the user hovers over an element.
@@ -16,7 +17,7 @@ export function usePrefetchOnHover(
     queryClient.prefetchQuery({
       queryKey,
       queryFn,
-      staleTime: staleTime ?? 5 * 60 * 1000,
+      staleTime: staleTime ?? STALE_TIMES.default,
     });
   }, [queryClient, queryKey, queryFn, staleTime]);
 

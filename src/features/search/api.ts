@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@lib/api';
+import { STALE_TIMES } from '@lib/queryConfig';
 import type { SearchResults } from '@shared/types/api';
 
 export function useSearch(query: string) {
@@ -7,6 +8,6 @@ export function useSearch(query: string) {
     queryKey: ['search', query],
     queryFn: () => api<SearchResults>(`/search?q=${encodeURIComponent(query)}`),
     enabled: query.length >= 2,
-    staleTime: 60_000, // 1 min
+    staleTime: STALE_TIMES.search,
   });
 }

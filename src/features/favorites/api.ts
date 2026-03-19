@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@lib/api';
+import { STALE_TIMES } from '@lib/queryConfig';
+import { useToastStore } from '@lib/toastStore';
 import type { DbFavorite, FavoriteRequest } from '@shared/types/api';
 
 const FAVORITES_KEY = ['favorites'] as const;
@@ -8,7 +10,7 @@ export function useFavorites() {
   return useQuery({
     queryKey: FAVORITES_KEY,
     queryFn: () => api<DbFavorite[]>('/favorites'),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: STALE_TIMES.favorites,
   });
 }
 
@@ -52,6 +54,10 @@ export function useAddFavorite() {
       if (context?.previous) {
         queryClient.setQueryData(FAVORITES_KEY, context.previous);
       }
+      useToastStore.getState().addToast('Failed to add favorite', 'error');
+    },
+    onSuccess: () => {
+      useToastStore.getState().addToast('Added to favorites', 'success');
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: FAVORITES_KEY });
@@ -79,6 +85,10 @@ export function useRemoveFavorite() {
       if (context?.previous) {
         queryClient.setQueryData(FAVORITES_KEY, context.previous);
       }
+      useToastStore.getState().addToast('Failed to update favorites', 'error');
+    },
+    onSuccess: () => {
+      useToastStore.getState().addToast('Removed from favorites', 'success');
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: FAVORITES_KEY });

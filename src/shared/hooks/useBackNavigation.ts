@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useRouter } from '@tanstack/react-router';
-import { usePlayerStore, useUIStore } from '@lib/store';
+import { usePlayerStore } from '@lib/store';
 
 /**
  * Handles Escape and Backspace as "Back" navigation.
@@ -22,8 +22,7 @@ export function useBackNavigation() {
       ) return;
 
       // Don't intercept when player is active — usePlayerKeyboard handles it
-      // Check both global store (FullscreenPlayer) and suppressArrowNav (inline PlayerPage)
-      if (usePlayerStore.getState().currentStreamId || useUIStore.getState().suppressArrowNav) return;
+      if (usePlayerStore.getState().currentStreamId) return;
 
       if (e.key === 'Escape' || e.key === 'Backspace' || e.keyCode === 4) {
         e.preventDefault();

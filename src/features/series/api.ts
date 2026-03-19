@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery, useQueries } from '@tanstack/react-query';
 import { api } from '@lib/api';
+import { STALE_TIMES } from '@lib/queryConfig';
 import type { XtreamCategory, XtreamSeriesItem, XtreamSeriesInfo } from '@shared/types/api';
 
 // ── Channel-to-language mapping (fallback until category parser is rewritten) ──
@@ -114,7 +115,7 @@ export function useSeriesCategories() {
   return useQuery({
     queryKey: ['series', 'categories'],
     queryFn: () => api<XtreamCategory[]>('/series/categories'),
-    staleTime: 6 * 60 * 60 * 1000,
+    staleTime: STALE_TIMES.categories,
   });
 }
 
@@ -124,7 +125,7 @@ export function useSeriesList(categoryId: string) {
     queryKey: ['series', 'list', categoryId],
     queryFn: () => api<XtreamSeriesItem[]>(`/series/list/${categoryId}`),
     enabled: !!categoryId,
-    staleTime: 2 * 60 * 60 * 1000,
+    staleTime: STALE_TIMES.streams,
   });
 }
 
@@ -134,7 +135,7 @@ export function useSeriesInfo(seriesId: string) {
     queryKey: ['series', 'info', seriesId],
     queryFn: () => api<XtreamSeriesInfo>(`/series/info/${seriesId}`),
     enabled: !!seriesId,
-    staleTime: 2 * 60 * 60 * 1000,
+    staleTime: STALE_TIMES.streams,
   });
 }
 
@@ -153,7 +154,7 @@ export function useSeriesByLanguage(language: string) {
     queries: channelIds.map((catId) => ({
       queryKey: ['series', 'list', catId],
       queryFn: () => api<XtreamSeriesItem[]>(`/series/list/${catId}`),
-      staleTime: 2 * 60 * 60 * 1000,
+      staleTime: STALE_TIMES.streams,
     })),
   });
 
