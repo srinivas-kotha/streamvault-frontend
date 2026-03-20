@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useNavigate, useParams } from '@tanstack/react-router';
+import { useParams, useRouter } from '@tanstack/react-router';
 import { useVODInfo } from '../api';
 import { useWatchHistory } from '@features/history/api';
 import { StarRating } from '@shared/components/StarRating';
@@ -37,7 +37,8 @@ function StartOverButton({ vodId, onStartOver }: { vodId: string; onStartOver: (
 
 export function MovieDetail() {
   const { vodId } = useParams({ from: '/_authenticated/vod/$vodId' });
-  const navigate = useNavigate();
+  const router = useRouter();
+  const goBack = () => router.history.back();
   const { data, isLoading } = useVODInfo(vodId);
   const { data: watchHistory } = useWatchHistory();
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
@@ -63,7 +64,7 @@ export function MovieDetail() {
 
   const { ref: backRef, showFocusRing: backFocusRing, focusProps: backFocusProps } = useSpatialFocusable({
     focusKey: `vod-back-${vodId}`,
-    onEnterPress: () => navigate({ to: '/vod' }),
+    onEnterPress: goBack,
   });
 
   const { ref: closeRef, showFocusRing: closeFocusRing, focusProps: closeFocusProps } = useSpatialFocusable({
@@ -101,8 +102,8 @@ export function MovieDetail() {
     return (
       <div className="text-center py-12">
         <p className="text-text-muted">Content unavailable. The provider may be temporarily down.</p>
-        <button onClick={() => navigate({ to: '/vod' })} className="mt-4 px-4 py-2 bg-teal/15 text-teal rounded-lg text-sm hover:bg-teal/25 transition-colors">
-          Back to Movies
+        <button onClick={goBack} className="mt-4 px-4 py-2 bg-teal/15 text-teal rounded-lg text-sm hover:bg-teal/25 transition-colors">
+          Go Back
         </button>
       </div>
     );
@@ -117,7 +118,7 @@ export function MovieDetail() {
           <button
             ref={backRef}
             {...backFocusProps}
-            onClick={() => navigate({ to: '/vod' })}
+            onClick={goBack}
             className={`flex items-center gap-1 text-text-secondary hover:text-text-primary text-sm mb-4 transition-colors rounded-lg px-2 py-1 ${
               backFocusRing ? 'ring-2 ring-teal bg-surface-raised' : ''
             }`}
