@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from '@tanstack/react-router';
+import { useParams, useRouter } from '@tanstack/react-router';
 import { useSeriesInfo } from '../api';
 import { useWatchHistory } from '@features/history/api';
 import { StarRating } from '@shared/components/StarRating';
@@ -342,7 +342,8 @@ function FocusableEpisodeItem({
 
 export function SeriesDetail() {
   const { seriesId } = useParams({ from: '/_authenticated/series/$seriesId' });
-  const navigate = useNavigate();
+  const router = useRouter();
+  const goBack = () => router.history.back();
   const { data, isLoading } = useSeriesInfo(seriesId);
   const { data: watchHistory } = useWatchHistory();
 
@@ -531,7 +532,7 @@ export function SeriesDetail() {
 
   const { ref: backRef, showFocusRing: backFocusRing, focusProps: backFocusProps } = useSpatialFocusable({
     focusKey: `series-back-${seriesId}`,
-    onEnterPress: () => navigate({ to: '/series' }),
+    onEnterPress: goBack,
   });
 
   // Auto-focus: try specific targets using doesFocusableExist to avoid silently setting
@@ -582,8 +583,8 @@ export function SeriesDetail() {
     return (
       <div className="text-center py-12">
         <p className="text-text-muted">Content unavailable. The provider may be temporarily down.</p>
-        <button onClick={() => navigate({ to: '/series' })} className="mt-4 px-4 py-2 bg-teal/15 text-teal rounded-lg text-sm hover:bg-teal/25 transition-colors">
-          Back to Series
+        <button onClick={goBack} className="mt-4 px-4 py-2 bg-teal/15 text-teal rounded-lg text-sm hover:bg-teal/25 transition-colors">
+          Go Back
         </button>
       </div>
     );
@@ -616,7 +617,7 @@ export function SeriesDetail() {
               <button
                 ref={backRef}
                 {...backFocusProps}
-                onClick={() => navigate({ to: '/series' })}
+                onClick={goBack}
                 className={`flex items-center gap-1.5 text-text-secondary hover:text-text-primary text-sm transition-colors min-h-[44px] rounded-lg px-2 py-1 ${
                   backFocusRing ? 'ring-2 ring-teal bg-surface-raised' : ''
                 }`}
