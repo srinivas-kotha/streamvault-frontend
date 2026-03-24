@@ -11,6 +11,8 @@ export interface LandscapeCardProps {
   subtitle?: string;
   /** Progress 0-100 — renders continue-watching bar when provided */
   progress?: number;
+  /** Duration text e.g. "1h 30m" */
+  duration?: string;
   onClick?: () => void;
   className?: string;
   /** Used for data-focus-key — must be unique per card in a list */
@@ -67,6 +69,7 @@ export const LandscapeCard = memo(function LandscapeCard({
   imageUrl,
   subtitle,
   progress,
+  duration,
   onClick,
   className,
   focusKey,
@@ -135,6 +138,15 @@ export const LandscapeCard = memo(function LandscapeCard({
         aria-hidden="true"
         className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-bg-primary/90 to-transparent pointer-events-none"
       />
+
+      {/* Duration badge — top right */}
+      {duration && (
+        <div className="absolute top-2 right-2 pointer-events-none">
+          <span className="text-[10px] font-medium text-text-primary bg-bg-primary/70 px-1.5 py-0.5 rounded">
+            {duration}
+          </span>
+        </div>
+      )}
 
       {/* Text overlay — bottom */}
       <div
