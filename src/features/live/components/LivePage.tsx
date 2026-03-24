@@ -1,5 +1,4 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { useSearch, useNavigate } from '@tanstack/react-router';
 
 import { useLiveCategories, useLiveStreams } from '../api';
 import { ChannelGrid } from './ChannelGrid';
@@ -9,8 +8,6 @@ import { SkeletonGrid } from '@shared/components/Skeleton';
 import { EmptyState } from '@shared/components/EmptyState';
 import { useDebounce } from '@shared/hooks/useDebounce';
 import { PageTransition } from '@shared/components/PageTransition';
-import { PlayerPage } from '@features/player/components/PlayerPage';
-import { usePlayerStore } from '@lib/store';
 import { useSpatialFocusable, useSpatialContainer, FocusContext, setFocus } from '@shared/hooks/useSpatialNav';
 import type { XtreamCategory } from '@shared/types/api';
 
@@ -157,22 +154,53 @@ function SidebarNav({ categories, activeCatId, isLoading, onSelect }: SidebarNav
   );
 }
 
+// ── LiveControlsBar: search input + view mode toggle ─────────────────────────
+
+const GRID_ICON = (
+  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 0h7v7h-7v-7z" />
+  </svg>
+);
+
+const EPG_ICON = (
+  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M3 4h18v2H3V4zm0 5h18v2H3V9zm0 5h18v2H3v-2zm0 5h18v2H3v-2z" />
+  </svg>
+);
+
+function LiveControlsBar({ searchQuery, setSearchQuery, viewMode, setViewMode }: {
+  searchQuery: string;
+  setSearchQuery: (q: string) => void;
+  viewMode: ViewMode;
+  setViewMode: (m: ViewMode) => void;
+}) {
+  const { focusKey: controlsFocusKey } = useSpatialContainer({ focusKey: 'live-controls' });
+  return (
+    <FocusContext.Provider value={controlsFocusKey}>
+      <div className="flex items-center gap-3 mb-4">
+        <FocusableLiveSearch searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+        <div className="flex items-center bg-surface-raised border border-border rounded-lg overflow-hidden">
+          <FocusableViewToggle id="toggle-view-grid" isActive={viewMode === 'grid'} onSelect={() => setViewMode('grid')} title="Grid view" icon={GRID_ICON} />
+          <FocusableViewToggle id="toggle-view-epg" isActive={viewMode === 'epg'} onSelect={() => setViewMode('epg')} title="EPG guide" icon={EPG_ICON} />
+        </div>
+      </div>
+    </FocusContext.Provider>
+  );
+}
+
+// ── LivePage ──────────────────────────────────────────────────────────────────
+
 export function LivePage() {
-  const searchParams = useSearch({ from: '/_authenticated/live' });
-  const play = searchParams.play;
-  const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const debouncedSearch = useDebounce(searchQuery);
 
-  // Page container
-  const { ref: contentRef, focusKey: contentFocusKey } = useSpatialContainer({
-    focusKey: 'live-content',
-    focusable: false,
-  });
+  const { ref: contentRef, focusKey: contentFocusKey } = useSpatialContainer({ focusKey: 'live-content', focusable: false });
+  const { ref: layoutRef, focusKey: layoutFocusKey } = useSpatialContainer({ focusKey: 'live-layout' });
+  const { ref: mainRef, focusKey: mainFocusKey } = useSpatialContainer({ focusKey: 'live-main' });
+  const { focusKey: channelGridFocusKey } = useSpatialContainer({ focusKey: 'live-channel-grid' });
 
-  // Auto-focus sidebar on mount
   useEffect(() => {
     const timer = setTimeout(() => {
       try { setFocus('live-sidebar'); } catch { /* not mounted */ }
@@ -180,40 +208,14 @@ export function LivePage() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Horizontal split: sidebar | main
-  const { ref: layoutRef, focusKey: layoutFocusKey } = useSpatialContainer({
-    focusKey: 'live-layout',
-  });
-
-  // Main content area
-  const { ref: mainRef, focusKey: mainFocusKey } = useSpatialContainer({
-    focusKey: 'live-main',
-  });
-
-  // Controls bar (search + view toggles)
-  const { focusKey: controlsFocusKey } = useSpatialContainer({
-    focusKey: 'live-controls',
-  });
-
-  // Channel grid container
-  const { focusKey: channelGridFocusKey } = useSpatialContainer({
-    focusKey: 'live-channel-grid',
-  });
-
   const { data: categories, isLoading: catLoading } = useLiveCategories();
   const firstCatId = categories?.[0]?.category_id || '';
   const activeCatId = selectedCategory || firstCatId;
-
   const { data: streams, isLoading: streamsLoading } = useLiveStreams(activeCatId);
 
-  const currentStreamName = usePlayerStore((s) => s.currentStreamName);
-
-  // Sort categories with Telugu/Indian first
   const sortedCategories = useMemo(() => {
     if (!categories) return [];
-    return [...categories].sort((a, b) =>
-      categoryPriority(a.category_name) - categoryPriority(b.category_name)
-    );
+    return [...categories].sort((a, b) => categoryPriority(a.category_name) - categoryPriority(b.category_name));
   }, [categories]);
 
   const filteredStreams = useMemo(() => {
@@ -224,71 +226,19 @@ export function LivePage() {
   }, [streams, debouncedSearch]);
 
   return (
-    <>
-      {/* Inline Player — OUTSIDE PageTransition so fixed positioning works on TV */}
-      {play && (
-        <PlayerPage
-          streamType="live"
-          streamId={play}
-          streamName={currentStreamName || undefined}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TanStack Router search params type requires cast
-          onClose={() => navigate({ search: { ...searchParams, play: undefined } } as any)}
-        />
-      )}
-
     <PageTransition>
     <FocusContext.Provider value={contentFocusKey}>
     <div ref={contentRef} className="flex flex-col gap-4 h-full">
-      {/* Featured Channels Section */}
-      {!play && <FeaturedChannels />}
+      {/* Featured Channels — AC-01: playback via playerStore in ChannelCard/FeaturedChannels */}
+      <FeaturedChannels />
 
       <FocusContext.Provider value={layoutFocusKey}>
       <div ref={layoutRef} className="flex gap-6 flex-1 min-h-0">
-        {/* Category Sidebar — vertical focus boundary */}
-        <SidebarNav
-          categories={sortedCategories}
-          activeCatId={activeCatId}
-          isLoading={catLoading}
-          onSelect={setSelectedCategory}
-        />
+        <SidebarNav categories={sortedCategories} activeCatId={activeCatId} isLoading={catLoading} onSelect={setSelectedCategory} />
 
-        {/* Main Content */}
         <FocusContext.Provider value={mainFocusKey}>
         <div ref={mainRef} className="flex-1 min-w-0">
-          {/* Top bar: Search + View toggle */}
-          <FocusContext.Provider value={controlsFocusKey}>
-          <div className="flex items-center gap-3 mb-4">
-            <FocusableLiveSearch searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-
-            {/* View mode toggle */}
-            <div className="flex items-center bg-surface-raised border border-border rounded-lg overflow-hidden">
-              <FocusableViewToggle
-                id="toggle-view-grid"
-                mode="grid"
-                isActive={viewMode === 'grid'}
-                onSelect={() => setViewMode('grid')}
-                title="Grid view"
-                icon={
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 0h7v7h-7v-7z" />
-                  </svg>
-                }
-              />
-              <FocusableViewToggle
-                id="toggle-view-epg"
-                mode="epg"
-                isActive={viewMode === 'epg'}
-                onSelect={() => setViewMode('epg')}
-                title="EPG guide"
-                icon={
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M3 4h18v2H3V4zm0 5h18v2H3V9zm0 5h18v2H3v-2zm0 5h18v2H3v-2z" />
-                  </svg>
-                }
-              />
-            </div>
-          </div>
-          </FocusContext.Provider>
+          <LiveControlsBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} viewMode={viewMode} setViewMode={setViewMode} />
 
           <FocusContext.Provider value={channelGridFocusKey}>
           {streamsLoading ? (
@@ -296,11 +246,7 @@ export function LivePage() {
               <SkeletonGrid count={18} aspectRatio="square" />
             </div>
           ) : filteredStreams.length === 0 ? (
-            <EmptyState
-              title="No channels found"
-              message={debouncedSearch ? 'Try a different search term' : 'This category is empty'}
-              icon="content"
-            />
+            <EmptyState title="No channels found" message={debouncedSearch ? 'Try a different search term' : 'This category is empty'} icon="content" />
           ) : viewMode === 'epg' ? (
             <EPGGrid channels={filteredStreams} />
           ) : (
@@ -314,6 +260,5 @@ export function LivePage() {
     </div>
     </FocusContext.Provider>
     </PageTransition>
-    </>
   );
 }
