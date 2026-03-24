@@ -12,6 +12,9 @@ export interface PosterCardProps {
   imageUrl: string;
   rating?: string | number;
   isNew?: boolean;
+  year?: number;
+  isFavorite?: boolean;
+  onFavoriteToggle?: () => void;
   onClick?: () => void;
   className?: string;
   /** Used for data-focus-key — must be unique per card in a list */
@@ -44,6 +47,9 @@ export const PosterCard = memo(function PosterCard({
   imageUrl,
   rating,
   isNew,
+  year,
+  isFavorite,
+  onFavoriteToggle,
   onClick,
   className,
   focusKey,
@@ -63,12 +69,17 @@ export const PosterCard = memo(function PosterCard({
 
   const hasBadge = isNew || rating !== undefined;
 
+  const ariaLabelParts = [title];
+  if (year) ariaLabelParts.push(String(year));
+  if (rating !== undefined) ariaLabelParts.push(String(rating));
+  const ariaLabel = ariaLabelParts.join(' — ');
+
   return (
     <div
       data-focus-key={focusKey}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
-      aria-label={title}
+      aria-label={ariaLabel}
       onClick={onClick}
       onKeyDown={onClick ? handleKeyDown : undefined}
       className={cn(
@@ -125,7 +136,35 @@ export const PosterCard = memo(function PosterCard({
         </div>
       )}
 
-      {/* Title — bottom overlay */}
+      {/* Favorite toggle (top-right) */}
+      {onFavoriteToggle && (
+        <button
+          type="button"
+          role="button"
+          aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+          onClick={(e) => {
+            e.stopPropagation();
+            onFavoriteToggle();
+          }}
+          className="absolute top-2 right-2 z-10 p-1 rounded-full bg-bg-primary/50 hover-capable:hover:bg-bg-primary/70 transition-[background-color] duration-150"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill={isFavorite ? 'currentColor' : 'none'}
+            stroke="currentColor"
+            strokeWidth={2}
+            className={cn('w-4 h-4', isFavorite ? 'text-error' : 'text-text-primary')}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"
+            />
+          </svg>
+        </button>
+      )}
+
+      {/* Title + year — bottom overlay */}
       <div className="absolute inset-x-0 bottom-0 px-2 pb-2 pointer-events-none">
         <p className={cn(
           'font-medium text-text-primary truncate font-[family-name:var(--font-family-heading)] leading-snug',
@@ -133,6 +172,11 @@ export const PosterCard = memo(function PosterCard({
         )}>
           {title}
         </p>
+        {year && (
+          <p className="text-[10px] text-text-secondary mt-0.5">
+            {year}
+          </p>
+        )}
       </div>
     </div>
   );

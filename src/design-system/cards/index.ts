@@ -9,3 +9,9 @@ export type { LandscapeCardProps } from './LandscapeCard';
 
 export { HeroCard } from './HeroCard';
 export type { HeroCardProps } from './HeroCard';
+
+export { ChannelCard } from './ChannelCard';
+export type { ChannelCardProps } from './ChannelCard';
+
+export { EpisodeCard } from './EpisodeCard';
+export type { EpisodeCardProps } from './EpisodeCard';
