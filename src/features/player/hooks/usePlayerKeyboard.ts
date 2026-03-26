@@ -27,10 +27,15 @@ export interface UsePlayerKeyboardOptions {
   onChannelUp?: () => void;
   /** Channel down callback (live TV, debounced 300ms) */
   onChannelDown?: () => void;
+  /** Imperative seek function (calls video element directly) */
+  onSeek?: (time: number) => void;
 }
 
 export function usePlayerKeyboard(options: UsePlayerKeyboardOptions = {}) {
-  const { isTVMode = false, onChannelUp, onChannelDown } = options;
+  const { isTVMode = false, onChannelUp, onChannelDown, onSeek } = options;
+
+  const onSeekRef = useRef(onSeek);
+  onSeekRef.current = onSeek;
 
   const holdStateRef = useRef<SeekHoldState | null>(null);
   const holdClearTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -143,7 +148,11 @@ export function usePlayerKeyboard(options: UsePlayerKeyboardOptions = {}) {
                 currentState.currentTime + 10 * direction,
               ),
             );
-            usePlayerStore.setState({ currentTime: newTime });
+            if (onSeekRef.current) {
+              onSeekRef.current(newTime);
+            } else {
+              usePlayerStore.setState({ currentTime: newTime });
+            }
           } else {
             const hold = holdStateRef.current;
             if (hold && hold.key === e.key) {
@@ -156,7 +165,11 @@ export function usePlayerKeyboard(options: UsePlayerKeyboardOptions = {}) {
                   currentState.currentTime + step * direction,
                 ),
               );
-              usePlayerStore.setState({ currentTime: newTime });
+              if (onSeekRef.current) {
+                onSeekRef.current(newTime);
+              } else {
+                usePlayerStore.setState({ currentTime: newTime });
+              }
             }
           }
           return;

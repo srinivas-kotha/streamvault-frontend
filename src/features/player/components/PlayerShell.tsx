@@ -7,6 +7,7 @@
 
 import { useRef, useCallback, useEffect, useState } from "react";
 import { usePlayerStore } from "@lib/stores/playerStore";
+import type { PlayerStatus } from "@lib/stores/playerStore";
 import { useDeviceContext } from "@shared/hooks/useDeviceContext";
 import { usePlayerKeyboard } from "../hooks/usePlayerKeyboard";
 import { BufferingOverlay } from "./BufferingOverlay";
@@ -33,11 +34,14 @@ export function PlayerShell() {
   const playNextEpisode = usePlayerStore((s) => s.playNextEpisode);
   const playPrevEpisode = usePlayerStore((s) => s.playPrevEpisode);
   const seriesContext = usePlayerStore((s) => s.seriesContext);
+  const currentQuality = usePlayerStore((s) => s.currentQuality);
+  const currentSubtitle = usePlayerStore((s) => s.currentSubtitle);
 
   const { deviceClass, isTVMode } = useDeviceContext();
   const playerRef = useRef<VideoElementHandle>(null);
   const [controlsVisible, setControlsVisible] = useState(true);
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isInternalStatusChangeRef = useRef(false);
 
   // Fetch stream URL (only when active)
   const { data: streamData } = useStreamUrl(
@@ -52,6 +56,14 @@ export function PlayerShell() {
     seriesContext !== null &&
     seriesContext.episodes.length > 0 &&
     seriesContext.episodeNum < seriesContext.episodes.length;
+
+  const handleStatusChange = useCallback(
+    (newStatus: PlayerStatus) => {
+      if (isInternalStatusChangeRef.current) return;
+      setStatus(newStatus);
+    },
+    [setStatus],
+  );
 
   const handleTimeUpdate = useCallback(
     (time: number, dur: number) => {
@@ -93,11 +105,50 @@ export function PlayerShell() {
     }
   }, [volume, isMuted]);
 
+  // Bridge: playerStore.status → video element play/pause
+  useEffect(() => {
+    const video = playerRef.current?.getVideo();
+    if (!video) return;
+
+    if (status === "playing" && video.paused) {
+      isInternalStatusChangeRef.current = true;
+      video
+        .play()
+        .catch(() => {})
+        .finally(() => {
+          isInternalStatusChangeRef.current = false;
+        });
+    } else if (status === "paused" && !video.paused) {
+      isInternalStatusChangeRef.current = true;
+      video.pause();
+      // pause() is synchronous, reset flag on next tick
+      queueMicrotask(() => {
+        isInternalStatusChangeRef.current = false;
+      });
+    }
+  }, [status]);
+
+  // Bridge: playerStore.currentQuality → HLS quality level
+  useEffect(() => {
+    playerRef.current?.setQuality(currentQuality);
+  }, [currentQuality]);
+
+  // Bridge: playerStore.currentSubtitle → HLS subtitle track
+  useEffect(() => {
+    playerRef.current?.setSubtitleTrack(currentSubtitle);
+  }, [currentSubtitle]);
+
+  // Keyboard seek handler — bridges to video element
+  const handleSeek = useCallback((time: number) => {
+    playerRef.current?.seek(time);
+  }, []);
+
   // Keyboard controls (v2 — store-based)
   usePlayerKeyboard({
     isTVMode,
     onChannelUp: isLive ? playNextEpisode : undefined,
     onChannelDown: isLive ? playPrevEpisode : undefined,
+    onSeek: handleSeek,
   });
 
   // Idle → render nothing
@@ -128,7 +179,7 @@ export function PlayerShell() {
           format={streamData.format}
           startTime={startTime}
           isTVMode={isTVMode}
-          onStatusChange={setStatus}
+          onStatusChange={handleStatusChange}
           onTimeUpdate={handleTimeUpdate}
           onEnded={hasNext ? playNextEpisode : undefined}
         />
