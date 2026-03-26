@@ -56,7 +56,8 @@ function FeaturedCard({ channel }: { channel: XtreamLiveStream }) {
           <img
             src={upgradeProtocol(channel.icon)}
             alt={channel.name}
-            loading="lazy"
+            loading="eager"
+            fetchPriority="high"
             className="w-full h-full object-contain p-4 transition-transform duration-300 group-hover:scale-110"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = "none";

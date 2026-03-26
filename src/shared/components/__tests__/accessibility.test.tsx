@@ -30,14 +30,15 @@ describe("SkipToContent ARIA", () => {
     expect(screen.getByRole("link")).toHaveAttribute("href", "#main-content");
   });
 
-  it("has sr-only class to be visually hidden", () => {
+  it("is positioned off-screen by default (translate-based hiding)", () => {
     render(<SkipToContent />);
-    expect(screen.getByRole("link").className).toContain("sr-only");
+    // Uses -translate-y-[200%] instead of sr-only (which breaks focus traversal)
+    expect(screen.getByRole("link").className).toContain("-translate-y-");
   });
 
-  it("has focus:not-sr-only so it appears on focus", () => {
+  it("slides into view on focus (focus:translate-y-0)", () => {
     render(<SkipToContent />);
-    expect(screen.getByRole("link").className).toContain("focus:not-sr-only");
+    expect(screen.getByRole("link").className).toContain("focus:translate-y-0");
   });
 });
 

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 
 interface DesktopLayoutProps {
   children: ReactNode;
@@ -13,7 +13,10 @@ export function DesktopLayout({ children }: DesktopLayoutProps) {
   return (
     <div className="min-h-screen bg-obsidian">
       {/* Top navbar placeholder */}
-      <nav className="h-14 bg-surface border-b border-border-subtle flex items-center px-6">
+      <nav
+        aria-label="Main navigation"
+        className="h-14 bg-surface border-b border-border-subtle flex items-center px-6"
+      >
         <span className="text-text-muted text-sm">StreamVault</span>
       </nav>
 

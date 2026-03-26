@@ -23,6 +23,12 @@ export default defineConfig({
     video: "retain-on-failure",
     ignoreHTTPSErrors: true,
     storageState: STORAGE_STATE,
+    // Custom header to identify E2E test traffic — backend can use this to
+    // relax rate limiting (e.g., skip or raise limit when header is present).
+    // Backend change needed: check for X-E2E-Test header in rate limiter middleware.
+    extraHTTPHeaders: {
+      "X-E2E-Test": process.env.E2E_TEST_KEY || "playwright",
+    },
   },
 
   projects: [

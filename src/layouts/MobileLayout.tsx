@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 
 interface MobileLayoutProps {
   children: ReactNode;
@@ -18,7 +18,10 @@ export function MobileLayout({ children }: MobileLayoutProps) {
       </main>
 
       {/* Bottom tab navigation placeholder */}
-      <nav className="fixed bottom-0 inset-x-0 h-14 bg-surface border-t border-border-subtle flex items-center justify-around z-40">
+      <nav
+        aria-label="Main navigation"
+        className="fixed bottom-0 inset-x-0 h-14 bg-surface border-t border-border-subtle flex items-center justify-around z-40"
+      >
         <span className="text-text-muted text-xs">Home</span>
         <span className="text-text-muted text-xs">Search</span>
         <span className="text-text-muted text-xs">Library</span>

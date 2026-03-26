@@ -4,7 +4,12 @@
  */
 
 import "@testing-library/jest-dom";
+import * as matchers from "vitest-axe/matchers";
+import { expect } from "vitest";
 import { server } from "./mocks/server";
+
+// Register vitest-axe matchers (toHaveNoViolations)
+expect.extend(matchers);
 
 // ── MSW server lifecycle ────────────────────────────────────────────────────
 
