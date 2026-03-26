@@ -240,15 +240,26 @@ export function MoviesTabContent({ language, lang }: MoviesTabContentProps) {
     hasActiveFilters,
   );
 
-  // Latest movies rail: top 20 by added date
+  // Latest movies rail: top 20 by added date (derived from rails data to avoid extra fetch)
   const latestMovies = useMemo(() => {
-    if (!allMovies.length) return [];
-    return [...allMovies]
+    if (hasActiveFilters) {
+      // When filters active, use allMovies (already fetched)
+      if (!allMovies.length) return [];
+      return [...allMovies]
+        .sort(
+          (a, b) => parseInt(b.added || "0", 10) - parseInt(a.added || "0", 10),
+        )
+        .slice(0, 20);
+    }
+    // Default view: derive from rails data (no extra query needed)
+    const allFromRails = movieRails.flatMap((r) => r.items);
+    if (!allFromRails.length) return [];
+    return [...allFromRails]
       .sort(
         (a, b) => parseInt(b.added || "0", 10) - parseInt(a.added || "0", 10),
       )
       .slice(0, 20);
-  }, [allMovies]);
+  }, [hasActiveFilters, allMovies, movieRails]);
 
   // Category chips from rails data
   const categoryChips = useMemo(
