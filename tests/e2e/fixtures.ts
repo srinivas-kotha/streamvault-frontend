@@ -24,8 +24,10 @@ export async function authenticate(page: Page): Promise<void> {
   // Submit
   await page.locator("#login-submit").click();
 
-  // Wait for redirect away from login (home redirects to /language/telugu)
-  await page.waitForURL("**/language/**", { timeout: 15_000 });
+  // Wait for redirect away from login
+  await page.waitForURL((url) => !url.pathname.includes("/login"), {
+    timeout: 15_000,
+  });
 }
 
 /**
