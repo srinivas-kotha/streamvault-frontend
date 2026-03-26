@@ -223,9 +223,6 @@ interface MoviesTabContentProps {
 
 export function MoviesTabContent({ language, lang }: MoviesTabContentProps) {
   const navigate = useNavigate();
-  const { rails: movieRails, isLoading: railsLoading } =
-    useLanguageMovieRails(language);
-  const { allMovies, isLoading: allLoading } = useLanguageAllMovies(language);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -235,15 +232,34 @@ export function MoviesTabContent({ language, lang }: MoviesTabContentProps) {
   const hasActiveFilters =
     !!debouncedSearch || activeCategory !== null || sortKey !== "name_asc";
 
-  // Latest movies rail: top 20 by added date
+  const { rails: movieRails, isLoading: railsLoading } =
+    useLanguageMovieRails(language);
+  // Only fetch all movies when filters are active — avoids 10 parallel queries on initial mount
+  const { allMovies, isLoading: allLoading } = useLanguageAllMovies(
+    language,
+    hasActiveFilters,
+  );
+
+  // Latest movies rail: top 20 by added date (derived from rails data to avoid extra fetch)
   const latestMovies = useMemo(() => {
-    if (!allMovies.length) return [];
-    return [...allMovies]
+    if (hasActiveFilters) {
+      // When filters active, use allMovies (already fetched)
+      if (!allMovies.length) return [];
+      return [...allMovies]
+        .sort(
+          (a, b) => parseInt(b.added || "0", 10) - parseInt(a.added || "0", 10),
+        )
+        .slice(0, 20);
+    }
+    // Default view: derive from rails data (no extra query needed)
+    const allFromRails = movieRails.flatMap((r) => r.items);
+    if (!allFromRails.length) return [];
+    return [...allFromRails]
       .sort(
         (a, b) => parseInt(b.added || "0", 10) - parseInt(a.added || "0", 10),
       )
       .slice(0, 20);
-  }, [allMovies]);
+  }, [hasActiveFilters, allMovies, movieRails]);
 
   // Category chips from rails data
   const categoryChips = useMemo(

@@ -32,11 +32,11 @@ export function useLiveStreams(categoryId: string) {
   });
 }
 
-export function useEPG(streamId: string) {
+export function useEPG(streamId: string, enabled = true) {
   return useQuery({
     queryKey: ["live", "epg", streamId],
     queryFn: () => api<XtreamEPGItem[]>(`/live/epg/${streamId}`),
-    enabled: !!streamId,
+    enabled: !!streamId && enabled,
     staleTime: STALE_TIMES.epg,
     refetchInterval: 300000, // 5 minutes
   });

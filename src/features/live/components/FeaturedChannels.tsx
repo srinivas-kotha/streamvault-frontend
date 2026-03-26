@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   useSpatialFocusable,
@@ -14,7 +14,15 @@ import { upgradeProtocol } from "@shared/components/LazyImage";
 function FeaturedCard({ channel }: { channel: XtreamLiveStream }) {
   const navigate = useNavigate();
   const playStream = usePlayerStore((s) => s.playStream);
-  const { data: epg } = useEPG(channel.id);
+
+  // Defer EPG to avoid mass query storm on mount (5 featured cards × 1 query each).
+  const [epgEnabled, setEpgEnabled] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setEpgEnabled(true), 2000);
+    return () => clearTimeout(t);
+  }, []);
+
+  const { data: epg } = useEPG(channel.id, epgEnabled);
 
   const nowPlaying = epg?.find((item) => {
     const now = new Date();
