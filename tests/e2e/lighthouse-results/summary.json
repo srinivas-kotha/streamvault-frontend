@@ -1,0 +1,114 @@
+{
+  "login": {
+    "scores": {
+      "performance": 100,
+      "accessibility": 93,
+      "bestPractices": 100,
+      "seo": 63
+    },
+    "vitals": {
+      "FCP": "0.4 s",
+      "LCP": "0.4 s",
+      "CLS": "0",
+      "TBT": "0 ms",
+      "SI": "0.3 s",
+      "TTI": "0.4 s"
+    }
+  },
+  "language-hub": {
+    "scores": {
+      "performance": 49,
+      "accessibility": 96,
+      "bestPractices": 100,
+      "seo": 66
+    },
+    "vitals": {
+      "FCP": "0.9 s",
+      "LCP": "2.9 s",
+      "CLS": "0",
+      "TBT": "900 ms",
+      "SI": "2.6 s",
+      "TTI": "2.8 s"
+    }
+  },
+  "vod": {
+    "scores": {
+      "performance": 100,
+      "accessibility": 88,
+      "bestPractices": 96,
+      "seo": 63
+    },
+    "vitals": {
+      "FCP": "0.3 s",
+      "LCP": "0.4 s",
+      "CLS": "0",
+      "TBT": "0 ms",
+      "SI": "0.4 s",
+      "TTI": "0.3 s"
+    }
+  },
+  "series": {
+    "scores": {
+      "performance": 97,
+      "accessibility": 95,
+      "bestPractices": 96,
+      "seo": 66
+    },
+    "vitals": {
+      "FCP": "0.4 s",
+      "LCP": "1.1 s",
+      "CLS": "0",
+      "TBT": "70 ms",
+      "SI": "1.0 s",
+      "TTI": "0.6 s"
+    }
+  },
+  "live": {
+    "scores": {
+      "performance": 64,
+      "accessibility": 96,
+      "bestPractices": 100,
+      "seo": 66
+    },
+    "vitals": {
+      "FCP": "0.6 s",
+      "LCP": "1.8 s",
+      "CLS": "0.007",
+      "TBT": "750 ms",
+      "SI": "1.4 s",
+      "TTI": "1.7 s"
+    }
+  },
+  "search": {
+    "scores": {
+      "performance": 100,
+      "accessibility": 96,
+      "bestPractices": 100,
+      "seo": 63
+    },
+    "vitals": {
+      "FCP": "0.3 s",
+      "LCP": "0.3 s",
+      "CLS": "0",
+      "TBT": "0 ms",
+      "SI": "0.4 s",
+      "TTI": "0.4 s"
+    }
+  },
+  "settings": {
+    "scores": {
+      "performance": 100,
+      "accessibility": 93,
+      "bestPractices": 96,
+      "seo": 63
+    },
+    "vitals": {
+      "FCP": "0.3 s",
+      "LCP": "0.3 s",
+      "CLS": "0",
+      "TBT": "0 ms",
+      "SI": "0.3 s",
+      "TTI": "0.3 s"
+    }
+  }
+}

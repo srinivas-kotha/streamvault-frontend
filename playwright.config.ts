@@ -4,9 +4,12 @@ import dotenv from "dotenv";
 // Load .env for E2E credentials
 dotenv.config();
 
+const STORAGE_STATE = "tests/e2e/.auth/storage-state.json";
+
 export default defineConfig({
   testDir: "./tests/e2e",
-  fullyParallel: true,
+  globalSetup: "./tests/e2e/global-setup.ts",
+  fullyParallel: false, // Run serial to minimize re-logins on token expiry
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 1,
   workers: process.env.CI ? 1 : undefined,
@@ -19,6 +22,7 @@ export default defineConfig({
     screenshot: "only-on-failure",
     video: "retain-on-failure",
     ignoreHTTPSErrors: true,
+    storageState: STORAGE_STATE,
   },
 
   projects: [

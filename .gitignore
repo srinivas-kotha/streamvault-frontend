@@ -29,3 +29,10 @@ fire-tv/build/
 fire-tv/app/build/
 fire-tv/gradle/wrapper/gradle-wrapper.jar
 .claude/worktrees/
+
+# Playwright
+test-results/
+tests/e2e/.auth/
+tests/e2e/screenshots/
+playwright-report/
+blob-report/
