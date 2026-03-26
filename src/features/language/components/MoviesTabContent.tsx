@@ -223,9 +223,6 @@ interface MoviesTabContentProps {
 
 export function MoviesTabContent({ language, lang }: MoviesTabContentProps) {
   const navigate = useNavigate();
-  const { rails: movieRails, isLoading: railsLoading } =
-    useLanguageMovieRails(language);
-  const { allMovies, isLoading: allLoading } = useLanguageAllMovies(language);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -234,6 +231,14 @@ export function MoviesTabContent({ language, lang }: MoviesTabContentProps) {
 
   const hasActiveFilters =
     !!debouncedSearch || activeCategory !== null || sortKey !== "name_asc";
+
+  const { rails: movieRails, isLoading: railsLoading } =
+    useLanguageMovieRails(language);
+  // Only fetch all movies when filters are active — avoids 10 parallel queries on initial mount
+  const { allMovies, isLoading: allLoading } = useLanguageAllMovies(
+    language,
+    hasActiveFilters,
+  );
 
   // Latest movies rail: top 20 by added date
   const latestMovies = useMemo(() => {

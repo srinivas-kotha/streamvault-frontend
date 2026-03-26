@@ -1,4 +1,4 @@
-import { useCallback, memo } from "react";
+import { useCallback, memo, useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useSpatialFocusable } from "@shared/hooks/useSpatialNav";
 import { useEPG } from "../api";
@@ -16,7 +16,16 @@ export const ChannelCard = memo(function ChannelCard({
 }: ChannelCardProps) {
   const navigate = useNavigate();
   const playStream = usePlayerStore((s) => s.playStream);
-  const { data: epg } = useEPG(channel.id);
+
+  // Defer EPG queries until after initial render to avoid mass query storm on mount.
+  // The "now playing" text is cosmetic — a short delay does not affect UX.
+  const [epgEnabled, setEpgEnabled] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setEpgEnabled(true), 2000);
+    return () => clearTimeout(t);
+  }, []);
+
+  const { data: epg } = useEPG(channel.id, epgEnabled);
 
   const nowPlaying = epg?.find((item) => {
     const now = new Date();
