@@ -1,16 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { HomePage } from '../HomePage';
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { HomePage } from "../HomePage";
 
 // ── mock child components ────────────────────────────────────────────────────
 
-vi.mock('../HeroBanner', () => ({
+vi.mock("../HeroBanner", () => ({
   HeroBanner: (props: any) => (
     <div data-testid="hero-banner">{props.title}</div>
   ),
 }));
 
-vi.mock('../ContentRail', () => ({
+vi.mock("../ContentRail", () => ({
   ContentRail: (props: any) => (
     <div data-testid="content-rail" data-rail-title={props.title}>
       {props.title}
@@ -18,19 +18,17 @@ vi.mock('../ContentRail', () => ({
   ),
 }));
 
-vi.mock('../ContinueWatchingRail', () => ({
+vi.mock("../ContinueWatchingRail", () => ({
   ContinueWatchingRail: () => (
     <div data-testid="continue-watching-rail">Continue Watching</div>
   ),
 }));
 
-vi.mock('../FeaturedRail', () => ({
-  FeaturedRail: () => (
-    <div data-testid="featured-rail">Featured</div>
-  ),
+vi.mock("../FeaturedRail", () => ({
+  FeaturedRail: () => <div data-testid="featured-rail">Featured</div>,
 }));
 
-vi.mock('../CategoryRail', () => ({
+vi.mock("../CategoryRail", () => ({
   CategoryRail: (props: any) => (
     <div data-testid="category-rail" data-category={props.category}>
       {props.title}
@@ -41,12 +39,12 @@ vi.mock('../CategoryRail', () => ({
 // ── mock hooks ───────────────────────────────────────────────────────────────
 
 const mockUseDeviceContext = {
-  deviceType: 'desktop' as string,
+  deviceType: "desktop" as string,
   isTVMode: false,
   isMobile: false,
 };
 
-vi.mock('@/hooks/useDeviceContext', () => ({
+vi.mock("@/hooks/useDeviceContext", () => ({
   useDeviceContext: () => mockUseDeviceContext,
 }));
 
@@ -57,79 +55,85 @@ function renderHomePage() {
 }
 
 beforeEach(() => {
-  mockUseDeviceContext.deviceType = 'desktop';
+  mockUseDeviceContext.deviceType = "desktop";
   mockUseDeviceContext.isTVMode = false;
   mockUseDeviceContext.isMobile = false;
 });
 
 // ── tests ─────────────────────────────────────────────────────────────────────
 
-describe('HomePage — structure', () => {
-  it('renders HeroBanner component', () => {
+describe("HomePage — structure", () => {
+  it("renders HeroBanner component", () => {
     renderHomePage();
-    expect(screen.getByTestId('hero-banner')).toBeTruthy();
+    expect(screen.getByTestId("hero-banner")).toBeTruthy();
   });
 
-  it('renders at least 3 content rails', () => {
+  it("renders at least 3 content rails", () => {
     const { container } = renderHomePage();
-    const rails = container.querySelectorAll('[data-testid="content-rail"], [data-testid="continue-watching-rail"], [data-testid="featured-rail"], [data-testid="category-rail"]');
+    const rails = container.querySelectorAll(
+      '[data-testid="content-rail"], [data-testid="continue-watching-rail"], [data-testid="featured-rail"], [data-testid="category-rail"]',
+    );
     expect(rails.length).toBeGreaterThanOrEqual(3);
   });
 
-  it('renders ContinueWatchingRail when user has watch history', () => {
+  it("renders ContinueWatchingRail when user has watch history", () => {
     renderHomePage();
     // ContinueWatchingRail should be rendered (mocked data indicates watch history)
-    expect(screen.getByTestId('continue-watching-rail')).toBeTruthy();
+    expect(screen.getByTestId("continue-watching-rail")).toBeTruthy();
   });
 });
 
-describe('HomePage — loading state', () => {
-  it('renders skeleton screens during loading', () => {
+describe("HomePage — loading state", () => {
+  it("renders skeleton screens during loading", () => {
     // Mock data hooks to return loading state
     const { container } = renderHomePage();
     // During initial render / loading, skeleton elements should appear
     // (This test validates loading state behavior when data hooks return isLoading: true)
-    const skeletons = container.querySelectorAll('[data-testid="hero-skeleton"], .animate-pulse, [data-testid="rail-skeleton"]');
+    const skeletons = container.querySelectorAll(
+      '[data-testid="hero-skeleton"], .animate-pulse, [data-testid="rail-skeleton"]',
+    );
     // The page should either show real content or skeletons — not crash
     expect(container.firstChild).toBeTruthy();
   });
 });
 
-describe('HomePage — page structure', () => {
-  it('has correct page title/heading', () => {
+describe("HomePage — page structure", () => {
+  it("has correct page title/heading", () => {
     renderHomePage();
     // Page should have a main heading or document title
-    const heading = screen.queryByRole('heading') || screen.queryByText(/home/i);
+    const heading =
+      screen.queryByRole("heading") || screen.queryByText(/home/i);
     expect(heading).toBeTruthy();
   });
 });
 
-describe('HomePage — content order', () => {
-  it('renders hero first, then rails in correct order', () => {
+describe("HomePage — content order", () => {
+  it("renders hero first, then rails in correct order", () => {
     const { container } = renderHomePage();
     const elements = container.querySelectorAll(
       '[data-testid="hero-banner"], [data-testid="continue-watching-rail"], [data-testid="featured-rail"], [data-testid="content-rail"], [data-testid="category-rail"]',
     );
 
     // First element should be the hero banner
-    expect(elements[0]?.getAttribute('data-testid')).toBe('hero-banner');
+    expect(elements[0]?.getAttribute("data-testid")).toBe("hero-banner");
 
     // Verify there are elements after the hero
     expect(elements.length).toBeGreaterThan(1);
   });
 });
 
-describe('HomePage — accessibility', () => {
-  it('renders with a main landmark', () => {
-    renderHomePage();
-    const main = screen.getByRole('main');
-    expect(main).toBeTruthy();
+describe("HomePage — accessibility", () => {
+  it("does not render its own main landmark (layout provides it)", () => {
+    const { container } = renderHomePage();
+    // HomePage uses <div> not <main> — layouts wrap children in <main>
+    const mains = container.querySelectorAll("main");
+    expect(mains.length).toBe(0);
   });
 });
 
-describe('HomePage — TV mode', () => {
-  it('renders without crashing in TV mode', () => {
-    mockUseDeviceContext.deviceType = 'firetv';
+describe("HomePage — TV mode", () => {
+  it("renders without crashing in TV mode", () => {
+    mockUseDeviceContext.deviceType = "firetv";
     mockUseDeviceContext.isTVMode = true;
     const { container } = renderHomePage();
     expect(container.firstChild).toBeTruthy();

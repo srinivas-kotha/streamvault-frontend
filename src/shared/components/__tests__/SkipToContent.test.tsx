@@ -19,23 +19,22 @@ describe("SkipToContent", () => {
     expect(link).toHaveAttribute("href", "#main-content");
   });
 
-  it("is visually hidden by default (has sr-only class)", () => {
+  it("is positioned off-screen by default (negative translate)", () => {
     render(<SkipToContent />);
     const link = screen.getByRole("link", { name: /skip to main content/i });
-    expect(link.className).toContain("sr-only");
+    // Uses -translate-y-[200%] to position off-screen (not sr-only which breaks focus)
+    expect(link.className).toContain("-translate-y-");
   });
 
-  it("shows when focused (has focus:not-sr-only class)", () => {
+  it("slides into view on focus (focus:translate-y-0 class)", () => {
     render(<SkipToContent />);
     const link = screen.getByRole("link", { name: /skip to main content/i });
-    // The focus variant class should be present so the link appears on focus
-    expect(link.className).toContain("focus:not-sr-only");
+    expect(link.className).toContain("focus:translate-y-0");
   });
 
-  it("has high z-index when focused", () => {
+  it("has high z-index", () => {
     render(<SkipToContent />);
     const link = screen.getByRole("link", { name: /skip to main content/i });
-    // z-[9999] class present in class string
     expect(link.className).toContain("9999");
   });
 

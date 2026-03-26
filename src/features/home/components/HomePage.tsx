@@ -1,9 +1,9 @@
-import { useDeviceContext } from '@/hooks/useDeviceContext';
-import { HeroBanner } from './HeroBanner';
-import { ContentRail } from './ContentRail';
-import { ContinueWatchingRail } from './ContinueWatchingRail';
-import { FeaturedRail } from './FeaturedRail';
-import { CategoryRail } from './CategoryRail';
+import { useDeviceContext } from "@/hooks/useDeviceContext";
+import { HeroBanner } from "./HeroBanner";
+import { ContentRail } from "./ContentRail";
+import { ContinueWatchingRail } from "./ContinueWatchingRail";
+import { FeaturedRail } from "./FeaturedRail";
+import { CategoryRail } from "./CategoryRail";
 
 // ---------------------------------------------------------------------------
 // Component
@@ -15,7 +15,7 @@ export function HomePage() {
   void device;
 
   return (
-    <main className="pb-12">
+    <div className="pb-12">
       <h1 className="sr-only">Home</h1>
 
       {/* Hero banner */}
@@ -23,7 +23,7 @@ export function HomePage() {
         title="Featured Content"
         description="Discover the latest and greatest content."
         imageUrl="/hero-placeholder.jpg"
-        genres={['Drama', 'Action']}
+        genres={["Drama", "Action"]}
         rating="8.5"
         onPlay={() => {}}
       />
@@ -39,11 +39,7 @@ export function HomePage() {
       <CategoryRail title="Comedy Series" category="comedy" />
 
       {/* Generic content rail example */}
-      <ContentRail
-        title="Trending Now"
-        items={[]}
-        renderCard={() => null}
-      />
-    </main>
+      <ContentRail title="Trending Now" items={[]} renderCard={() => null} />
+    </div>
   );
 }

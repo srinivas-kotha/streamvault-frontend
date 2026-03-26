@@ -25,7 +25,13 @@ async function globalSetup(config: FullConfig) {
   const browser = await chromium.launch();
 
   // Login with retry — API may be slow or rate-limited
-  let context = await browser.newContext({ baseURL, ignoreHTTPSErrors: true });
+  let context = await browser.newContext({
+    baseURL,
+    ignoreHTTPSErrors: true,
+    extraHTTPHeaders: {
+      "X-E2E-Test": process.env.E2E_TEST_KEY || "playwright",
+    },
+  });
   let page = await context.newPage();
   let loginSuccess = false;
 
@@ -63,6 +69,9 @@ async function globalSetup(config: FullConfig) {
         context = await browser.newContext({
           baseURL,
           ignoreHTTPSErrors: true,
+          extraHTTPHeaders: {
+            "X-E2E-Test": process.env.E2E_TEST_KEY || "playwright",
+          },
         });
         page = await context.newPage();
         // Wait before retry

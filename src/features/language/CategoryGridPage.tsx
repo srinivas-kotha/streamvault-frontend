@@ -179,7 +179,10 @@ export function CategoryGridPage() {
     <PageTransition>
       <div className="py-6">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-text-muted mb-4">
+        <nav
+          aria-label="Breadcrumb"
+          className="flex items-center gap-2 text-sm text-text-muted mb-4"
+        >
           <Link to="/" className="hover:text-text-primary transition-colors">
             Home
           </Link>

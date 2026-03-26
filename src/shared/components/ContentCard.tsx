@@ -1,6 +1,6 @@
-import { useCallback, memo, type ReactNode } from 'react';
-import { useSpatialFocusable } from '@shared/hooks/useSpatialNav';
-import { LazyImage } from './LazyImage';
+import { useCallback, memo, type ReactNode } from "react";
+import { useSpatialFocusable } from "@shared/hooks/useSpatialNav";
+import { LazyImage } from "./LazyImage";
 
 interface ContentCardProps {
   image: string;
@@ -12,13 +12,21 @@ interface ContentCardProps {
   onFavoriteToggle?: () => void;
   onRemove?: () => void;
   onClick?: () => void;
-  aspectRatio?: 'poster' | 'landscape' | 'square';
+  aspectRatio?: "poster" | "landscape" | "square";
   focusKey?: string;
   /** Eagerly load image with high fetchPriority (use for above-the-fold LCP images) */
   priority?: boolean;
 }
 
-function FocusableFavoriteButton({ isFavorite, onToggle, focusId }: { isFavorite?: boolean; onToggle: () => void; focusId: string }) {
+function FocusableFavoriteButton({
+  isFavorite,
+  onToggle,
+  focusId,
+}: {
+  isFavorite?: boolean;
+  onToggle: () => void;
+  focusId: string;
+}) {
   const { ref, showFocusRing, focusProps } = useSpatialFocusable({
     focusKey: focusId,
     onEnterPress: () => onToggle(),
@@ -28,24 +36,37 @@ function FocusableFavoriteButton({ isFavorite, onToggle, focusId }: { isFavorite
     <button
       ref={ref}
       {...focusProps}
-      onClick={(e) => { e.stopPropagation(); onToggle(); }}
-      className={`absolute top-2 right-2 p-1.5 rounded-full bg-obsidian/70 hover:bg-obsidian/80 transition-[background-color,box-shadow] ${showFocusRing ? 'ring-2 ring-teal z-10' : ''}`}
-      aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle();
+      }}
+      className={`absolute top-2 right-2 p-1.5 rounded-full bg-obsidian/70 hover:bg-obsidian/80 transition-[background-color,box-shadow] ${showFocusRing ? "ring-2 ring-teal z-10" : ""}`}
+      aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
     >
       <svg
-        className={`w-4 h-4 ${isFavorite ? 'text-warning fill-warning' : 'text-text-muted'}`}
+        className={`w-4 h-4 ${isFavorite ? "text-warning fill-warning" : "text-text-muted"}`}
         viewBox="0 0 24 24"
-        fill={isFavorite ? 'currentColor' : 'none'}
+        fill={isFavorite ? "currentColor" : "none"}
         stroke="currentColor"
         strokeWidth={2}
       >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+        />
       </svg>
     </button>
   );
 }
 
-function FocusableRemoveButton({ onRemove, focusId }: { onRemove: () => void; focusId: string }) {
+function FocusableRemoveButton({
+  onRemove,
+  focusId,
+}: {
+  onRemove: () => void;
+  focusId: string;
+}) {
   const { ref, showFocusRing, focusProps } = useSpatialFocusable({
     focusKey: focusId,
     onEnterPress: () => onRemove(),
@@ -55,21 +76,34 @@ function FocusableRemoveButton({ onRemove, focusId }: { onRemove: () => void; fo
     <button
       ref={ref}
       {...focusProps}
-      onClick={(e) => { e.stopPropagation(); onRemove(); }}
-      className={`absolute top-2 right-2 p-1 rounded-full bg-obsidian/70 hover:bg-error/80 transition-[background-color,box-shadow] ${showFocusRing ? 'ring-2 ring-error z-10 bg-error/80' : ''}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        onRemove();
+      }}
+      className={`absolute top-2 right-2 p-1 rounded-full bg-obsidian/70 hover:bg-error/80 transition-[background-color,box-shadow] ${showFocusRing ? "ring-2 ring-error z-10 bg-error/80" : ""}`}
       aria-label="Remove"
     >
-      <svg className="w-3.5 h-3.5 text-text-muted hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+      <svg
+        className="w-3.5 h-3.5 text-text-muted hover:text-white"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2.5}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M6 18L18 6M6 6l12 12"
+        />
       </svg>
     </button>
   );
 }
 
 const aspectClasses = {
-  poster: 'aspect-[2/3]',
-  landscape: 'aspect-video',
-  square: 'aspect-square',
+  poster: "aspect-[2/3]",
+  landscape: "aspect-video",
+  square: "aspect-square",
 };
 
 export const ContentCard = memo(function ContentCard({
@@ -82,11 +116,12 @@ export const ContentCard = memo(function ContentCard({
   onFavoriteToggle,
   onRemove,
   onClick,
-  aspectRatio = 'poster',
+  aspectRatio = "poster",
   focusKey: propFocusKey,
   priority,
 }: ContentCardProps) {
-  const cardKey = propFocusKey || `card-${title.replace(/\s+/g, '-').toLowerCase()}`;
+  const cardKey =
+    propFocusKey || `card-${title.replace(/\s+/g, "-").toLowerCase()}`;
 
   const onEnterPress = useCallback(() => {
     onClick?.();
@@ -97,7 +132,11 @@ export const ContentCard = memo(function ContentCard({
     onEnterPress,
     onFocus: (layout) => {
       // Auto-scroll into view when focused via D-pad
-      layout.node?.scrollIntoView({ behavior: 'instant', block: 'nearest', inline: 'nearest' });
+      layout.node?.scrollIntoView({
+        behavior: "instant",
+        block: "nearest",
+        inline: "nearest",
+      });
     },
   });
 
@@ -108,8 +147,8 @@ export const ContentCard = memo(function ContentCard({
       onClick={onClick}
       className={`group relative cursor-pointer rounded-lg overflow-hidden bg-surface-raised border transition-[transform,border-color,box-shadow] duration-200 ambient-glow ${
         showFocusRing
-          ? 'border-teal scale-[1.08] z-10 ring-2 ring-teal/60 ring-offset-2 ring-offset-obsidian shadow-[0_0_24px_rgba(45,212,191,0.3)]'
-          : 'border-border-subtle hover:border-teal/30 hover:scale-[1.03]'
+          ? "border-teal scale-[1.08] z-10 ring-2 ring-teal/60 ring-offset-2 ring-offset-obsidian shadow-[0_0_24px_rgba(45,212,191,0.3)]"
+          : "border-border-subtle hover:border-teal/30 hover:scale-[1.03]"
       }`}
     >
       {/* Image */}
@@ -126,18 +165,23 @@ export const ContentCard = memo(function ContentCard({
         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-obsidian/90 to-transparent" />
 
         {/* Badge */}
-        {badge && (
-          <div className="absolute top-2 left-2">{badge}</div>
-        )}
+        {badge && <div className="absolute top-2 left-2">{badge}</div>}
 
         {/* Favorite star */}
         {onFavoriteToggle && (
-          <FocusableFavoriteButton isFavorite={isFavorite} onToggle={onFavoriteToggle} focusId={`fav-btn-${cardKey}`} />
+          <FocusableFavoriteButton
+            isFavorite={isFavorite}
+            onToggle={onFavoriteToggle}
+            focusId={`fav-btn-${cardKey}`}
+          />
         )}
 
         {/* Remove button (for Continue Watching) */}
         {onRemove && (
-          <FocusableRemoveButton onRemove={onRemove} focusId={`remove-btn-${cardKey}`} />
+          <FocusableRemoveButton
+            onRemove={onRemove}
+            focusId={`remove-btn-${cardKey}`}
+          />
         )}
 
         {/* Progress bar */}
@@ -153,9 +197,13 @@ export const ContentCard = memo(function ContentCard({
 
       {/* Text */}
       <div className="p-1.5">
-        <h3 className="text-xs font-medium text-text-primary truncate">{title}</h3>
+        <p className="text-xs font-medium text-text-primary truncate">
+          {title}
+        </p>
         {subtitle && (
-          <p className="text-[10px] text-text-muted mt-0.5 truncate">{subtitle}</p>
+          <p className="text-[10px] text-text-muted mt-0.5 truncate">
+            {subtitle}
+          </p>
         )}
       </div>
     </div>
