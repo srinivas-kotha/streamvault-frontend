@@ -6,11 +6,7 @@ import { ContentCard } from "@shared/components/ContentCard";
 import { SkeletonGrid } from "@shared/components/Skeleton";
 import { EmptyState } from "@shared/components/EmptyState";
 import { useDebounce } from "@shared/hooks/useDebounce";
-import {
-  useSpatialFocusable,
-  useSpatialContainer,
-  FocusContext,
-} from "@shared/hooks/useSpatialNav";
+import { useSpatialFocusable } from "@shared/hooks/useSpatialNav";
 import { isNewContent } from "@shared/utils/isNewContent";
 import { usePlayerStore } from "@lib/store";
 import type { XtreamLiveStream } from "@shared/types/api";
@@ -158,10 +154,6 @@ interface LiveTabContentProps {
 export function LiveTabContent({ language, lang }: LiveTabContentProps) {
   const { rails, isLoading, allChannels } = useLanguageLiveChannels(language);
   const playStream = usePlayerStore((s) => s.playStream);
-  const { ref: contentRef, focusKey: contentFocusKey } = useSpatialContainer({
-    focusKey: "live-content-area",
-    focusable: true,
-  });
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -292,36 +284,35 @@ export function LiveTabContent({ language, lang }: LiveTabContentProps) {
         )
       ) : (
         /* Rails mode */
-        <FocusContext.Provider value={contentFocusKey}>
-          <div ref={contentRef} className="space-y-8">
-            {rails.map((rail) => (
-              <ContentRail
-                key={rail.category.id}
-                title={rail.category.name || rail.category.originalName}
-                seeAllTo={`/language/${lang}/category/${rail.category.id}`}
-              >
-                {rail.items.map((item) => (
-                  <FocusableCard
-                    key={item.id}
-                    focusKey={`live-${item.id}`}
-                    image={item.icon || ""}
-                    title={item.name}
-                    isNew={isNewContent(item.added ?? undefined)}
-                    aspectRatio="landscape"
-                    onClick={() => handlePlay(item)}
-                  />
-                ))}
-              </ContentRail>
-            ))}
-            {rails.length === 0 && (
-              <EmptyState
-                title="No live channels"
-                message={`No ${language} live channels found.`}
-                icon="content"
-              />
-            )}
-          </div>
-        </FocusContext.Provider>
+        <div className="space-y-8">
+          {rails.map((rail) => (
+            <ContentRail
+              key={rail.category.id}
+              title={rail.category.name || rail.category.originalName}
+              seeAllTo={`/language/${lang}/category/${rail.category.id}`}
+              flat
+            >
+              {rail.items.map((item) => (
+                <FocusableCard
+                  key={item.id}
+                  focusKey={`live-${item.id}`}
+                  image={item.icon || ""}
+                  title={item.name}
+                  isNew={isNewContent(item.added ?? undefined)}
+                  aspectRatio="landscape"
+                  onClick={() => handlePlay(item)}
+                />
+              ))}
+            </ContentRail>
+          ))}
+          {rails.length === 0 && (
+            <EmptyState
+              title="No live channels"
+              message={`No ${language} live channels found.`}
+              icon="content"
+            />
+          )}
+        </div>
       )}
     </div>
   );
