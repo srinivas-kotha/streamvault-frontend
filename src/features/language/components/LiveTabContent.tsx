@@ -284,12 +284,13 @@ export function LiveTabContent({ language, lang }: LiveTabContentProps) {
         )
       ) : (
         /* Rails mode */
-        <>
+        <div className="space-y-8">
           {rails.map((rail) => (
             <ContentRail
               key={rail.category.id}
               title={rail.category.name || rail.category.originalName}
               seeAllTo={`/language/${lang}/category/${rail.category.id}`}
+              flat
             >
               {rail.items.map((item) => (
                 <FocusableCard
@@ -311,7 +312,7 @@ export function LiveTabContent({ language, lang }: LiveTabContentProps) {
               icon="content"
             />
           )}
-        </>
+        </div>
       )}
     </div>
   );

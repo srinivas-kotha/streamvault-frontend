@@ -51,7 +51,8 @@ async function globalSetup(config: FullConfig) {
       await page.locator("#login-submit").click();
 
       await page.waitForURL((url) => !url.pathname.includes("/login"), {
-        timeout: 20_000,
+        timeout: 30_000,
+        waitUntil: "domcontentloaded",
       });
       loginSuccess = true;
       break;
@@ -74,8 +75,8 @@ async function globalSetup(config: FullConfig) {
           },
         });
         page = await context.newPage();
-        // Wait before retry
-        await new Promise((r) => setTimeout(r, 5_000));
+        // Wait before retry — longer pause to avoid rate limiting
+        await new Promise((r) => setTimeout(r, 10_000));
       }
     }
   }

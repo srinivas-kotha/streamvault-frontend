@@ -357,7 +357,7 @@ export function SeriesTabContent({ language }: SeriesTabContentProps) {
         <div className="space-y-8">
           {/* Recently Added rail */}
           {recentSeries.length > 0 && (
-            <ContentRail title="Recently Added">
+            <ContentRail title="Recently Added" flat>
               {recentSeries.map((item) => (
                 <FocusableCard
                   key={item.id}
@@ -379,7 +379,7 @@ export function SeriesTabContent({ language }: SeriesTabContentProps) {
             </ContentRail>
           )}
           {seriesRails.map((rail) => (
-            <ContentRail key={rail.channelId} title={rail.channelName}>
+            <ContentRail key={rail.channelId} title={rail.channelName} flat>
               {rail.items.map((item) => (
                 <FocusableCard
                   key={item.id}

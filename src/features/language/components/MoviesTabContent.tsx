@@ -364,13 +364,13 @@ export function MoviesTabContent({ language, lang }: MoviesTabContentProps) {
         /* Rails mode (no filters active) */
         <div className="space-y-8">
           {railsLoading && (
-            <ContentRail title="Loading..." isLoading={true}>
+            <ContentRail title="Loading..." isLoading={true} flat>
               <div />
             </ContentRail>
           )}
           {/* Latest Movies rail */}
           {latestMovies.length > 0 && !railsLoading && (
-            <ContentRail title="Latest Movies">
+            <ContentRail title="Latest Movies" flat>
               {latestMovies.map((item) => (
                 <FocusableCard
                   key={item.id}
@@ -395,6 +395,7 @@ export function MoviesTabContent({ language, lang }: MoviesTabContentProps) {
               key={rail.category.id}
               title={rail.category.name || rail.category.originalName}
               seeAllTo={`/language/${lang}/category/${rail.category.id}`}
+              flat
             >
               {rail.items.map((item) => (
                 <FocusableCard

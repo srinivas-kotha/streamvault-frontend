@@ -1,6 +1,5 @@
-import { type ReactNode } from 'react';
-import { ContentCard } from './ContentCard';
-import { FocusableElement } from './FocusableElement';
+import { type ReactNode } from "react";
+import { ContentCard } from "./ContentCard";
 
 interface FocusableCardProps {
   image: string;
@@ -13,7 +12,7 @@ interface FocusableCardProps {
   onFavoriteToggle?: () => void;
   onRemove?: () => void;
   onClick?: () => void;
-  aspectRatio?: 'poster' | 'landscape' | 'square';
+  aspectRatio?: "poster" | "landscape" | "square";
   /** Unique spatial focus key — prevents ID collisions when titles match */
   focusKey?: string;
   /** Eagerly load image with high fetchPriority (use for above-the-fold LCP images) */
@@ -31,18 +30,12 @@ export function FocusableCard({
   onFavoriteToggle,
   onRemove,
   onClick,
-  aspectRatio = 'poster',
+  aspectRatio = "poster",
   focusKey,
   priority,
 }: FocusableCardProps) {
-  const cardFocusKey = focusKey || `card-${title.replace(/\s+/g, '-').toLowerCase()}`;
-
   return (
-    <FocusableElement
-      focusKey={`rail-${cardFocusKey}`}
-      className="rail-item flex-shrink-0"
-      onClick={onClick}
-    >
+    <div className="rail-item flex-shrink-0">
       <ContentCard
         image={image}
         title={title}
@@ -53,7 +46,9 @@ export function FocusableCard({
             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-teal text-obsidian">
               NEW
             </span>
-          ) : badge
+          ) : (
+            badge
+          )
         }
         progress={progress}
         isFavorite={isFavorite}
@@ -63,6 +58,6 @@ export function FocusableCard({
         aspectRatio={aspectRatio}
         priority={priority}
       />
-    </FocusableElement>
+    </div>
   );
 }
