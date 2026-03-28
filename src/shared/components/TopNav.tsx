@@ -60,12 +60,9 @@ export function TopNav() {
   const [scrolled, setScrolled] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
-  // Register the top-nav spatial container — focusable: false so individual
-  // items are direct smartNavigate candidates (containers block Up navigation)
-  const { ref: topNavRef, focusKey: topNavFocusKey } = useSpatialContainer({
-    focusKey: "top-nav",
-    focusable: false,
-  });
+  // No FocusContext.Provider — nav items register directly in SN:ROOT
+  // so D-pad Up from page content can reach them
+  const topNavRef = useRef<HTMLElement>(null);
 
   // Track scroll position for transparency
   useEffect(() => {
@@ -94,90 +91,69 @@ export function TopNav() {
     };
   }, []);
 
-  // TV mode: logo + profile only
+  // Shared nav content for both TV and desktop
+  const navContent = (
+    <>
+      <Link
+        to="/"
+        className={`font-display font-bold text-text-primary hover:text-teal transition-colors flex-shrink-0 ${isTVMode ? "text-lg" : "text-xl"}`}
+      >
+        Stream<span className="text-teal">Vault</span>
+      </Link>
+
+      {/* Nav Links — D-pad navigable, no FocusContext wrapper so items are in SN:ROOT */}
+      <div className="flex items-center gap-1 ml-6 flex-1">
+        {NAV_ITEMS.map((item) => (
+          <NavLink
+            key={item.focusKey}
+            to={item.to}
+            label={item.label}
+            focusKey={item.focusKey}
+          />
+        ))}
+      </div>
+
+      <ProfileMenu
+        username={username}
+        profileOpen={profileOpen}
+        setProfileOpen={setProfileOpen}
+        onLogout={() => logoutMutation.mutate()}
+      />
+    </>
+  );
+
   if (isTVMode) {
     return (
-      <FocusContext.Provider value={topNavFocusKey}>
-        <header
-          ref={topNavRef}
-          className="fixed top-0 left-0 right-0 z-50 bg-obsidian/95"
+      <header
+        ref={topNavRef}
+        className="fixed top-0 left-0 right-0 z-50 bg-obsidian/95"
+      >
+        <nav
+          aria-label="Main navigation"
+          className="flex items-center h-12 px-4 lg:px-10"
         >
-          <nav
-            aria-label="Main navigation"
-            className="flex items-center justify-between h-12 px-4 lg:px-10"
-          >
-            <Link
-              to="/"
-              className="font-display text-lg font-bold text-text-primary flex-shrink-0"
-            >
-              Stream<span className="text-teal">Vault</span>
-            </Link>
-            <div className="flex items-center gap-1 ml-6">
-              {NAV_ITEMS.map((item) => (
-                <NavLink
-                  key={item.focusKey}
-                  to={item.to}
-                  label={item.label}
-                  focusKey={item.focusKey}
-                />
-              ))}
-            </div>
-            <ProfileMenu
-              username={username}
-              profileOpen={profileOpen}
-              setProfileOpen={setProfileOpen}
-              onLogout={() => logoutMutation.mutate()}
-            />
-          </nav>
-        </header>
-      </FocusContext.Provider>
+          {navContent}
+        </nav>
+      </header>
     );
   }
 
   return (
-    <FocusContext.Provider value={topNavFocusKey}>
-      <header
-        ref={topNavRef}
-        className={`fixed top-0 left-0 right-0 z-50 transition-[background-color,border-color] duration-300 ${
-          scrolled
-            ? `${isTVMode ? "bg-obsidian/95" : "bg-obsidian/90 backdrop-blur-xl"} border-b border-border-subtle shadow-lg`
-            : "bg-gradient-to-b from-obsidian/80 to-transparent"
-        }`}
+    <header
+      ref={topNavRef}
+      className={`fixed top-0 left-0 right-0 z-50 transition-[background-color,border-color] duration-300 ${
+        scrolled
+          ? "bg-obsidian/90 backdrop-blur-xl border-b border-border-subtle shadow-lg"
+          : "bg-gradient-to-b from-obsidian/80 to-transparent"
+      }`}
+    >
+      <nav
+        aria-label="Main navigation"
+        className="flex items-center h-16 px-4 lg:px-10"
       >
-        <nav
-          aria-label="Main navigation"
-          className="flex items-center justify-between h-16 px-4 lg:px-10"
-        >
-          {/* Logo */}
-          <Link
-            to="/"
-            className="font-display text-xl font-bold text-text-primary hover:text-teal transition-colors flex-shrink-0"
-          >
-            Stream<span className="text-teal">Vault</span>
-          </Link>
-
-          {/* Nav Links */}
-          <div className="flex items-center gap-1 ml-8">
-            {NAV_ITEMS.map((item) => (
-              <NavLink
-                key={item.focusKey}
-                to={item.to}
-                label={item.label}
-                focusKey={item.focusKey}
-              />
-            ))}
-          </div>
-
-          {/* Profile */}
-          <ProfileMenu
-            username={username}
-            profileOpen={profileOpen}
-            setProfileOpen={setProfileOpen}
-            onLogout={() => logoutMutation.mutate()}
-          />
-        </nav>
-      </header>
-    </FocusContext.Provider>
+        {navContent}
+      </nav>
+    </header>
   );
 }
 
