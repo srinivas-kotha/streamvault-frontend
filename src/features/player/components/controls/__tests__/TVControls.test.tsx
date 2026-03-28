@@ -125,11 +125,8 @@ describe("TVControls — seek indicator", () => {
 // ── Auto-hide ─────────────────────────────────────────────────────────────────
 
 describe("TVControls — auto-hide after 5s", () => {
-  it("TV controls auto-hide after 5 seconds", () => {
-    render(<TVControls />);
-    act(() => {
-      vi.advanceTimersByTime(5100);
-    });
+  it("TV controls hide when visible prop is false", () => {
+    render(<TVControls visible={false} />);
     const overlay = screen.getByTestId("tv-controls-overlay");
     expect(overlay).toHaveAttribute("data-visible", "false");
   });

@@ -14,6 +14,7 @@ import {
 import type HlsType from "hls.js";
 import type mpegtsType from "mpegts.js";
 import type { PlayerStatus } from "@lib/stores/playerStore";
+import { usePlayerStore } from "@lib/stores/playerStore";
 
 export interface QualityLevel {
   index: number;
@@ -54,6 +55,7 @@ interface VideoElementProps {
   autoPlay?: boolean;
   startTime?: number;
   isTVMode?: boolean;
+  retryCount?: number;
   onStatusChange?: (status: PlayerStatus) => void;
   onTimeUpdate?: (currentTime: number, duration: number) => void;
   onEnded?: () => void;
@@ -71,6 +73,7 @@ export const VideoElement = forwardRef<VideoElementHandle, VideoElementProps>(
       autoPlay = true,
       startTime = 0,
       isTVMode = false,
+      retryCount = 0,
       onStatusChange,
       onTimeUpdate,
       onEnded,
@@ -215,8 +218,8 @@ export const VideoElement = forwardRef<VideoElementHandle, VideoElementProps>(
         const hls = new Hls({
           enableWorker: !isTVMode, // AC-07: false on TV
           capLevelToPlayerSize: true,
-          maxBufferLength: isLive ? 10 : 30,
-          maxMaxBufferLength: isLive ? 30 : 120,
+          maxBufferLength: isLive ? 10 : 60,
+          maxMaxBufferLength: isLive ? 30 : 300,
           maxBufferSize: 60 * 1000 * 1000,
           maxBufferHole: 0.5,
           startLevel: -1,
@@ -382,7 +385,7 @@ export const VideoElement = forwardRef<VideoElementHandle, VideoElementProps>(
         video.onerror = null;
       };
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [url, format, isLive, autoPlay, startTime, isTVMode]);
+    }, [url, format, isLive, autoPlay, startTime, isTVMode, retryCount]);
 
     // ── Video event listeners ──────────────────────────────────────────────────
 
@@ -448,6 +451,20 @@ export const VideoElement = forwardRef<VideoElementHandle, VideoElementProps>(
         video.removeEventListener("canplay", onCanPlay);
       };
     }, [onStatusChange]);
+
+    // ── Buffered range reporting ────────────────────────────────────────────────
+    useEffect(() => {
+      const video = videoRef.current;
+      if (!video) return;
+      const handleProgress = () => {
+        if (video.buffered.length > 0) {
+          const end = video.buffered.end(video.buffered.length - 1);
+          usePlayerStore.getState().setBufferedEnd(end);
+        }
+      };
+      video.addEventListener("progress", handleProgress);
+      return () => video.removeEventListener("progress", handleProgress);
+    }, []);
 
     return (
       <div

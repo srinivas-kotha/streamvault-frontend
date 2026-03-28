@@ -372,11 +372,11 @@ describe("VideoElement — TV mode HLS config", () => {
     );
   });
 
-  it("uses maxBufferLength=30 for VOD streams", async () => {
+  it("uses maxBufferLength=60 for VOD streams", async () => {
     const HlsMock = (await import("hls.js")).default;
     await renderVideoElement({ isLive: false });
     expect(HlsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ maxBufferLength: 30 }),
+      expect.objectContaining({ maxBufferLength: 60 }),
     );
   });
 });

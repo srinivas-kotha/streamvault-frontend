@@ -45,19 +45,24 @@ describe("MobileControls — tap to show/hide", () => {
     expect(overlay).toHaveAttribute("data-visible", "false");
   });
 
-  it("tapping the overlay shows controls", () => {
-    render(<MobileControls />);
+  it("tapping the overlay calls onToggle", () => {
+    const onToggle = vi.fn();
+    render(<MobileControls onToggle={onToggle} />);
     fireEvent.click(screen.getByTestId("mobile-controls-overlay"));
-    const overlay = screen.getByTestId("mobile-controls-overlay");
-    expect(overlay).toHaveAttribute("data-visible", "true");
+    expect(onToggle).toHaveBeenCalledTimes(1);
   });
 
-  it("tapping again while visible hides controls", () => {
-    render(<MobileControls />);
-    fireEvent.click(screen.getByTestId("mobile-controls-overlay"));
-    fireEvent.click(screen.getByTestId("mobile-controls-overlay"));
-    const overlay = screen.getByTestId("mobile-controls-overlay");
-    expect(overlay).toHaveAttribute("data-visible", "false");
+  it("visible prop controls overlay visibility", () => {
+    const { rerender } = render(<MobileControls visible={true} />);
+    expect(screen.getByTestId("mobile-controls-overlay")).toHaveAttribute(
+      "data-visible",
+      "true",
+    );
+    rerender(<MobileControls visible={false} />);
+    expect(screen.getByTestId("mobile-controls-overlay")).toHaveAttribute(
+      "data-visible",
+      "false",
+    );
   });
 });
 
@@ -65,15 +70,11 @@ describe("MobileControls — tap to show/hide", () => {
 
 describe("MobileControls — controls content", () => {
   beforeEach(() => {
-    render(<MobileControls />);
-    // Reveal controls
-    fireEvent.click(screen.getByTestId("mobile-controls-overlay"));
+    render(<MobileControls visible={true} />);
   });
 
   it("shows play/pause button", () => {
-    expect(
-      screen.getByRole("button", { name: /pause|play/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByTestId("mobile-play-pause")).toBeInTheDocument();
   });
 
   it("shows seek back 10s button", () => {

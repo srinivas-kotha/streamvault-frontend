@@ -76,6 +76,7 @@ const mockVideoElement = {
   seek: vi.fn(),
   setQuality: vi.fn(),
   setSubtitleTrack: vi.fn(),
+  setPlaybackRate: vi.fn(),
   seekToLiveEdge: vi.fn(),
   getVideo: vi.fn(),
   toggleFullscreen: vi.fn(),
@@ -122,6 +123,14 @@ vi.mock("../../components/controls/TVControls", () => ({
 
 vi.mock("../../components/controls/MobileControls", () => ({
   MobileControls: () => <div data-testid="mobile-controls" />,
+}));
+
+vi.mock("../../hooks/useProgressTracking", () => ({
+  useProgressTracking: vi.fn(),
+}));
+
+vi.mock("../../components/PlayerOSD", () => ({
+  PlayerOSD: () => null,
 }));
 
 // ── Import after mocks ──────────────────────────────────────────────────────

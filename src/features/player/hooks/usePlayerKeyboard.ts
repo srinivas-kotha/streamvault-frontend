@@ -20,6 +20,10 @@ function getSeekStep(holdDurationMs: number): number {
   return 10;
 }
 
+export interface OSDCallback {
+  (type: string, value?: number, speed?: number): void;
+}
+
 export interface UsePlayerKeyboardOptions {
   /** Override TV mode detection (for testing) */
   isTVMode?: boolean;
@@ -29,13 +33,33 @@ export interface UsePlayerKeyboardOptions {
   onChannelDown?: () => void;
   /** Imperative seek function (calls video element directly) */
   onSeek?: (time: number) => void;
+  /** On-screen display callback for visual feedback */
+  onOSD?: OSDCallback;
+  /** Whether controls overlay is currently visible (for TV back-button two-press) */
+  controlsVisible?: boolean;
+  /** Show controls overlay (TV back-button first press) */
+  onShowControls?: () => void;
 }
 
 export function usePlayerKeyboard(options: UsePlayerKeyboardOptions = {}) {
-  const { isTVMode = false, onChannelUp, onChannelDown, onSeek } = options;
+  const {
+    isTVMode = false,
+    onChannelUp,
+    onChannelDown,
+    onSeek,
+    onOSD,
+    controlsVisible = true,
+    onShowControls,
+  } = options;
 
   const onSeekRef = useRef(onSeek);
   onSeekRef.current = onSeek;
+  const onOSDRef = useRef(onOSD);
+  onOSDRef.current = onOSD;
+  const controlsVisibleRef = useRef(controlsVisible);
+  controlsVisibleRef.current = controlsVisible;
+  const onShowControlsRef = useRef(onShowControls);
+  onShowControlsRef.current = onShowControls;
 
   const holdStateRef = useRef<SeekHoldState | null>(null);
   const holdClearTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -63,12 +87,17 @@ export function usePlayerKeyboard(options: UsePlayerKeyboardOptions = {}) {
       if (isBackKey) {
         e.preventDefault();
         e.stopPropagation();
-        // In non-TV mode, exit fullscreen first if open
+        // Non-TV: exit fullscreen first if open
         if (!isTVMode && document.fullscreenElement) {
           document.exitFullscreen();
-        } else {
-          usePlayerStore.getState().stopPlayback();
+          return;
         }
+        // TV two-press pattern: first press shows controls, second press closes
+        if (isTVMode && !controlsVisibleRef.current) {
+          onShowControlsRef.current?.();
+          return;
+        }
+        usePlayerStore.getState().stopPlayback();
         return;
       }
 
@@ -90,8 +119,10 @@ export function usePlayerKeyboard(options: UsePlayerKeyboardOptions = {}) {
           const current = state.status;
           if (current === "playing") {
             usePlayerStore.getState().setStatus("paused");
+            onOSDRef.current?.("pause");
           } else if (current === "paused") {
             usePlayerStore.getState().setStatus("playing");
+            onOSDRef.current?.("play");
           }
           return;
         }
@@ -160,6 +191,7 @@ export function usePlayerKeyboard(options: UsePlayerKeyboardOptions = {}) {
             } else {
               usePlayerStore.setState({ currentTime: newTime });
             }
+            onOSDRef.current?.(direction > 0 ? "seek-forward" : "seek-back");
           } else {
             const hold = holdStateRef.current;
             if (hold && hold.key === e.key) {
@@ -177,6 +209,14 @@ export function usePlayerKeyboard(options: UsePlayerKeyboardOptions = {}) {
               } else {
                 usePlayerStore.setState({ currentTime: newTime });
               }
+              // Show fast-forward/rewind OSD with speed and accumulated time
+              const speedMultiplier = step >= 120 ? 8 : step >= 60 ? 4 : 2;
+              const accumulated = Math.abs(newTime - currentState.currentTime);
+              onOSDRef.current?.(
+                direction > 0 ? "fast-forward" : "fast-rewind",
+                accumulated,
+                speedMultiplier,
+              );
             }
           }
           return;
@@ -185,14 +225,14 @@ export function usePlayerKeyboard(options: UsePlayerKeyboardOptions = {}) {
         // Non-live Arrow Up/Down = volume
         if (e.key === "ArrowUp") {
           const current = usePlayerStore.getState();
-          usePlayerStore
-            .getState()
-            .setVolume(Math.min(1, current.volume + 0.1));
+          const newVol = Math.min(1, current.volume + 0.1);
+          current.setVolume(newVol);
+          onOSDRef.current?.("volume", newVol);
         } else if (e.key === "ArrowDown") {
           const current = usePlayerStore.getState();
-          usePlayerStore
-            .getState()
-            .setVolume(Math.max(0, current.volume - 0.1));
+          const newVol = Math.max(0, current.volume - 0.1);
+          current.setVolume(newVol);
+          onOSDRef.current?.("volume", newVol);
         }
         return;
       }
@@ -206,8 +246,10 @@ export function usePlayerKeyboard(options: UsePlayerKeyboardOptions = {}) {
           const current = usePlayerStore.getState().status;
           if (current === "playing") {
             usePlayerStore.getState().setStatus("paused");
+            onOSDRef.current?.("pause");
           } else if (current === "paused") {
             usePlayerStore.getState().setStatus("playing");
+            onOSDRef.current?.("play");
           }
           break;
         }
@@ -225,7 +267,9 @@ export function usePlayerKeyboard(options: UsePlayerKeyboardOptions = {}) {
         case "m": {
           e.preventDefault();
           const current = usePlayerStore.getState();
-          current.setMuted(!current.isMuted);
+          const willMute = !current.isMuted;
+          current.setMuted(willMute);
+          onOSDRef.current?.(willMute ? "mute" : "unmute");
           break;
         }
         case ">": {
@@ -252,6 +296,57 @@ export function usePlayerKeyboard(options: UsePlayerKeyboardOptions = {}) {
           }
           break;
         }
+        case "j": {
+          // Seek backward 10s (YouTube-style)
+          if (!isLive) {
+            e.preventDefault();
+            const s = usePlayerStore.getState();
+            const newTime = Math.max(0, s.currentTime - 10);
+            if (onSeekRef.current) onSeekRef.current(newTime);
+            else usePlayerStore.setState({ currentTime: newTime });
+            onOSDRef.current?.("seek-back");
+          }
+          break;
+        }
+        case "l": {
+          // Seek forward 10s (YouTube-style)
+          if (!isLive) {
+            e.preventDefault();
+            const s = usePlayerStore.getState();
+            const newTime = Math.min(s.duration, s.currentTime + 10);
+            if (onSeekRef.current) onSeekRef.current(newTime);
+            else usePlayerStore.setState({ currentTime: newTime });
+            onOSDRef.current?.("seek-forward");
+          }
+          break;
+        }
+        case "n": {
+          // Next episode
+          e.preventDefault();
+          usePlayerStore.getState().playNextEpisode();
+          break;
+        }
+        case "p": {
+          // Previous episode
+          e.preventDefault();
+          usePlayerStore.getState().playPrevEpisode();
+          break;
+        }
+        default: {
+          // 0-9 digit keys: seek to percentage (0=0%, 5=50%, 9=90%)
+          if (!isLive && e.key >= "0" && e.key <= "9") {
+            e.preventDefault();
+            const s = usePlayerStore.getState();
+            if (s.duration > 0) {
+              const pct = parseInt(e.key) * 10;
+              const newTime = (pct / 100) * s.duration;
+              if (onSeekRef.current) onSeekRef.current(newTime);
+              else usePlayerStore.setState({ currentTime: newTime });
+              onOSDRef.current?.("seek-percent", pct);
+            }
+          }
+          break;
+        }
       }
     }
 
@@ -266,12 +361,13 @@ export function usePlayerKeyboard(options: UsePlayerKeyboardOptions = {}) {
       }
     }
 
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
+    // Capture phase: player gets keys BEFORE spatial nav or other handlers
+    window.addEventListener("keydown", handleKeyDown, { capture: true });
+    window.addEventListener("keyup", handleKeyUp, { capture: true });
 
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("keydown", handleKeyDown, { capture: true });
+      window.removeEventListener("keyup", handleKeyUp, { capture: true });
       if (holdClearTimeoutRef.current)
         clearTimeout(holdClearTimeoutRef.current);
       if (channelDebounceRef.current) clearTimeout(channelDebounceRef.current);

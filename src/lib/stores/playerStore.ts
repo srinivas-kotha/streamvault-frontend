@@ -129,6 +129,9 @@ interface PlayerState {
   // Error
   error: PlayerError | string | null;
 
+  // Retry count (incrementing forces VideoElement to re-initialize)
+  retryCount: number;
+
   // Actions
   playStream: (id: string, info: StreamInfo) => void;
   setStatus: (status: PlayerStatus) => void;
@@ -152,6 +155,9 @@ interface PlayerState {
 
   // Error
   setError: (error: PlayerError | string) => void;
+
+  // Retry
+  retryStream: () => void;
 
   // Episode navigation
   playNextEpisode: () => void;
@@ -181,6 +187,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   audioTracks: [],
   currentAudio: 0,
   error: null,
+  retryCount: 0,
 
   // ── playStream ──────────────────────────────────────────────────────────────
   playStream: (id, info) => {
@@ -195,6 +202,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       duration: 0,
       bufferedEnd: 0,
       error: null,
+      retryCount: 0,
       playbackRate: 1,
       qualityLevels: [],
       currentQuality: -1,
@@ -232,6 +240,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       duration: 0,
       bufferedEnd: 0,
       error: null,
+      retryCount: 0,
       playbackRate: 1,
       qualityLevels: [],
       currentQuality: -1,
@@ -274,6 +283,17 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     set({
       error,
       status: canTransition ? "error" : get().status,
+    });
+  },
+
+  // ── retryStream ─────────────────────────────────────────────────────────────
+  retryStream: () => {
+    const current = get().status;
+    if (current !== "error") return;
+    set({
+      error: null,
+      status: "loading",
+      retryCount: get().retryCount + 1,
     });
   },
 

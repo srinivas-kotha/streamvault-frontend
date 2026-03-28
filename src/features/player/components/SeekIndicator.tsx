@@ -21,7 +21,7 @@ export function SeekIndicator({ direction, seekCount }: SeekIndicatorProps) {
     if (direction && seekCount > 0) {
       setLastDirection(direction);
       setVisible(true);
-      const timer = setTimeout(() => setVisible(false), 800);
+      const timer = setTimeout(() => setVisible(false), 1500);
       return () => clearTimeout(timer);
     }
   }, [direction, seekCount]);
@@ -30,7 +30,7 @@ export function SeekIndicator({ direction, seekCount }: SeekIndicatorProps) {
 
   return (
     <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-      <div className="bg-black/60 backdrop-blur-sm rounded-2xl px-6 py-4 flex items-center gap-3 animate-[fadeInOut_0.8s_ease-in-out]">
+      <div className="bg-black/60 backdrop-blur-sm rounded-2xl px-6 py-4 flex items-center gap-3 animate-[fadeInOut_1.5s_ease-in-out]">
         {lastDirection === "backward" ? (
           <>
             <svg

@@ -39,14 +39,30 @@ export function TVControls({ visible = true, onActivity }: TVControlsProps) {
     };
   }, []);
 
+  // Track hold start time for seek acceleration display
+  const holdStartRef = useRef<number | null>(null);
+
   // Listen for key presses to notify parent and show seek indicator
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       onActivity?.();
 
       if (!isLive && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
-        const dir = e.key === "ArrowRight" ? "+10s" : "-10s";
-        setSeekIndicator(dir);
+        const sign = e.key === "ArrowRight" ? "+" : "-";
+        const isHeld = e.repeat || holdStartRef.current !== null;
+        if (!isHeld) {
+          holdStartRef.current = Date.now();
+        }
+        // Calculate actual seek step based on hold duration
+        const holdDuration = holdStartRef.current
+          ? Date.now() - holdStartRef.current
+          : 0;
+        let step = 10;
+        if (holdDuration >= 4000) step = 120;
+        else if (holdDuration >= 2000) step = 60;
+        else if (holdDuration >= 500) step = 30;
+
+        setSeekIndicator(`${sign}${step}s`);
         if (seekIndicatorTimerRef.current)
           clearTimeout(seekIndicatorTimerRef.current);
         seekIndicatorTimerRef.current = setTimeout(() => {
@@ -55,8 +71,20 @@ export function TVControls({ visible = true, onActivity }: TVControlsProps) {
       }
     }
 
+    function handleKeyUp(e: KeyboardEvent) {
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        setTimeout(() => {
+          holdStartRef.current = null;
+        }, 300);
+      }
+    }
+
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
   }, [isLive, onActivity]);
 
   const handlePlayPause = useCallback(() => {

@@ -37,8 +37,27 @@ export function DesktopControls({
   const setStatus = usePlayerStore((s) => s.setStatus);
   const streamType = usePlayerStore((s) => s.streamType);
 
+  const setCurrentTime = usePlayerStore((s) => s.setCurrentTime);
   const isLive = streamType === "live";
   const isPlaying = status === "playing";
+
+  const handleSeekBack = useCallback(() => {
+    const newTime = Math.max(0, currentTime - 10);
+    if (playerRef?.current) {
+      playerRef.current.seek(newTime);
+    } else {
+      setCurrentTime(newTime);
+    }
+  }, [currentTime, playerRef, setCurrentTime]);
+
+  const handleSeekForward = useCallback(() => {
+    const newTime = Math.min(duration, currentTime + 10);
+    if (playerRef?.current) {
+      playerRef.current.seek(newTime);
+    } else {
+      setCurrentTime(newTime);
+    }
+  }, [currentTime, duration, playerRef, setCurrentTime]);
 
   const handlePlayPause = useCallback(() => {
     if (isPlaying) {
@@ -93,6 +112,32 @@ export function DesktopControls({
             </svg>
           )}
         </button>
+
+        {/* Seek backward 10s */}
+        {!isLive && (
+          <button
+            onClick={handleSeekBack}
+            className="p-1.5 text-white/70 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-teal focus-visible:outline-none rounded"
+            aria-label="Seek back 10 seconds"
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12.5 3C7.81 3 4.01 6.54 3.57 11H1l3.5 4 3.5-4H5.59c.44-3.36 3.3-6 6.91-6 3.87 0 7 3.13 7 7s-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C7.82 20.04 10.05 21 12.5 21c4.97 0 9-4.03 9-9s-4.03-9-9-9z" />
+            </svg>
+          </button>
+        )}
+
+        {/* Seek forward 10s */}
+        {!isLive && (
+          <button
+            onClick={handleSeekForward}
+            className="p-1.5 text-white/70 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-teal focus-visible:outline-none rounded"
+            aria-label="Seek forward 10 seconds"
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M11.5 3c4.69 0 8.49 3.54 8.93 8H23l-3.5 4-3.5-4h2.02c-.44-3.36-3.3-6-6.91-6-3.87 0-7 3.13-7 7s3.13 7 7 7c1.93 0 3.68-.79 4.94-2.06l1.42 1.42C15.68 20.04 13.45 21 11.5 21c-4.97 0-9-4.03-9-9s4.03-9 9-9z" />
+            </svg>
+          </button>
+        )}
 
         {/* Mute */}
         <button
