@@ -10,6 +10,7 @@ import type {
   XtreamVODStream,
   XtreamSeriesItem,
   XtreamLiveStream,
+  XtreamCategory,
 } from "@shared/types/api";
 
 /**
@@ -42,18 +43,18 @@ export function useLanguageCategories(language: string) {
 /**
  * Fetch first N streams for each movie sub-category in a language.
  */
-export function useLanguageMovieRails(language: string, limit = 20) {
+export function useLanguageMovieRails(language: string) {
   const { movies, isReady } = useLanguageCategories(language);
 
   const queries = useQueries({
-    queries: movies.slice(0, 10).map((cat) => ({
+    queries: movies.map((cat) => ({
       queryKey: ["vod", "streams", cat.id],
       queryFn: () => api<XtreamVODStream[]>(`/vod/streams/${cat.id}`),
       enabled: isReady,
       staleTime: STALE_TIMES.streams,
       select: (data: XtreamVODStream[]) => ({
         category: cat,
-        items: data.slice(0, limit),
+        items: data,
       }),
     })),
   });
@@ -74,7 +75,7 @@ export function useLanguageAllMovies(language: string, enabled = true) {
   const { movies, isReady } = useLanguageCategories(language);
 
   const queries = useQueries({
-    queries: movies.slice(0, 10).map((cat) => ({
+    queries: movies.map((cat) => ({
       queryKey: ["vod", "streams", cat.id],
       queryFn: () => api<XtreamVODStream[]>(`/vod/streams/${cat.id}`),
       enabled: isReady && enabled,
@@ -97,7 +98,6 @@ export function useLanguageAllMovies(language: string, enabled = true) {
   const categories = useMemo(
     () =>
       movies
-        .slice(0, 10)
         .map((cat, idx) => ({
           id: cat.id,
           name: cat.name || cat.originalName,
@@ -117,18 +117,18 @@ export function useLanguageAllMovies(language: string, enabled = true) {
 /**
  * Fetch series for a language.
  */
-export function useLanguageSeriesRails(language: string, limit = 20) {
+export function useLanguageSeriesRails(language: string) {
   const { series, isReady } = useLanguageCategories(language);
 
   const queries = useQueries({
-    queries: series.slice(0, 10).map((cat) => ({
+    queries: series.map((cat) => ({
       queryKey: ["series", "list", cat.id],
       queryFn: () => api<XtreamSeriesItem[]>(`/series/list/${cat.id}`),
       enabled: isReady,
       staleTime: STALE_TIMES.streams,
       select: (data: XtreamSeriesItem[]) => ({
         category: cat,
-        items: data.slice(0, limit),
+        items: data,
       }),
     })),
   });
@@ -148,7 +148,7 @@ export function useLanguageLiveChannels(language: string) {
   const { live, isReady } = useLanguageCategories(language);
 
   const queries = useQueries({
-    queries: live.slice(0, 10).map((cat) => ({
+    queries: live.map((cat) => ({
       queryKey: ["live", "streams", cat.id],
       queryFn: () => api<XtreamLiveStream[]>(`/live/streams/${cat.id}`),
       enabled: isReady,
@@ -166,5 +166,69 @@ export function useLanguageLiveChannels(language: string) {
       .map((q) => q.data!),
     isLoading: queries.some((q) => q.isLoading),
     allChannels: queries.filter((q) => q.data).flatMap((q) => q.data!.items),
+  };
+}
+
+// ── Sports ────────────────────────────────────────────────────────────────────
+
+const SPORTS_KEYWORDS = [
+  "sport",
+  "cricket",
+  "ipl",
+  "football",
+  "soccer",
+  "nba",
+  "basketball",
+  "tennis",
+  "f1",
+  "formula",
+  "ufc",
+  "boxing",
+  "wrestling",
+  "hockey",
+  "baseball",
+  "golf",
+  "rugby",
+];
+
+function isSportsCategory(name: string): boolean {
+  const lower = name.toLowerCase();
+  return SPORTS_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+/**
+ * Fetch all sports-related live channels across all categories.
+ */
+export function useSportsChannels() {
+  const { data: allCategories } = useLiveCategories();
+
+  const sportsCategories = useMemo(
+    () =>
+      (allCategories ?? []).filter((cat: XtreamCategory) =>
+        isSportsCategory(cat.name),
+      ),
+    [allCategories],
+  );
+
+  const queries = useQueries({
+    queries: sportsCategories.map((cat: XtreamCategory) => ({
+      queryKey: ["live", "streams", cat.id],
+      queryFn: () => api<XtreamLiveStream[]>(`/live/streams/${cat.id}`),
+      enabled: sportsCategories.length > 0,
+      staleTime: STALE_TIMES.liveStreams,
+      select: (data: XtreamLiveStream[]) => ({
+        category: { id: cat.id, name: cat.name, originalName: cat.name },
+        items: data,
+      }),
+    })),
+  });
+
+  return {
+    rails: queries
+      .filter((q) => q.data && q.data.items.length > 0)
+      .map((q) => q.data!),
+    isLoading: queries.some((q) => q.isLoading),
+    allChannels: queries.filter((q) => q.data).flatMap((q) => q.data!.items),
+    hasCategories: sportsCategories.length > 0,
   };
 }
