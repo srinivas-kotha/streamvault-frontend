@@ -8,7 +8,7 @@ import { usePlayerStore } from "@lib/stores/playerStore";
 export function ErrorRecovery() {
   const error = usePlayerStore((s) => s.error);
   const stopPlayback = usePlayerStore((s) => s.stopPlayback);
-  const setStatus = usePlayerStore((s) => s.setStatus);
+  const retryStream = usePlayerStore((s) => s.retryStream);
 
   const errorMessage =
     typeof error === "string"
@@ -16,9 +16,7 @@ export function ErrorRecovery() {
       : (error?.message ?? "Something went wrong. Please try again.");
 
   const handleRetry = () => {
-    // Clear error and transition to loading
-    usePlayerStore.setState({ error: null });
-    setStatus("loading");
+    retryStream();
   };
 
   const handleClose = () => {

@@ -101,6 +101,14 @@ vi.mock("../controls/MobileControls", () => ({
   MobileControls: () => <div data-testid="mobile-controls" />,
 }));
 
+vi.mock("../../hooks/useProgressTracking", () => ({
+  useProgressTracking: vi.fn(),
+}));
+
+vi.mock("../PlayerOSD", () => ({
+  PlayerOSD: () => null,
+}));
+
 // ── Import AFTER mocks ────────────────────────────────────────────────────────
 
 import { PlayerShell } from "../PlayerShell";
@@ -128,6 +136,7 @@ beforeEach(() => {
     audioTracks: [],
     currentAudio: 0,
     error: null,
+    retryCount: 0,
   });
   vi.mocked(useDeviceContext).mockReturnValue({
     deviceClass: "desktop",

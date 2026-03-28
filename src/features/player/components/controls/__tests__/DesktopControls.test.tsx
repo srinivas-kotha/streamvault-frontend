@@ -59,19 +59,20 @@ describe("DesktopControls — play/pause", () => {
   it("shows play button when status is paused", () => {
     usePlayerStore.setState({ status: "paused" });
     render(<DesktopControls />);
-    expect(screen.getByRole("button", { name: /play/i })).toBeInTheDocument();
+    const btn = screen.getByTestId("desktop-play-pause");
+    expect(btn).toHaveAttribute("aria-label", "Play");
   });
 
   it("clicking pause transitions to paused", () => {
     render(<DesktopControls />);
-    fireEvent.click(screen.getByRole("button", { name: /pause/i }));
+    fireEvent.click(screen.getByTestId("desktop-play-pause"));
     expect(usePlayerStore.getState().status).toBe("paused");
   });
 
   it("clicking play transitions to playing", () => {
     usePlayerStore.setState({ status: "paused" });
     render(<DesktopControls />);
-    fireEvent.click(screen.getByRole("button", { name: /play/i }));
+    fireEvent.click(screen.getByTestId("desktop-play-pause"));
     expect(usePlayerStore.getState().status).toBe("playing");
   });
 });
@@ -181,13 +182,9 @@ describe("DesktopControls — auto-hide", () => {
     expect(screen.getByTestId("desktop-controls-overlay")).toBeVisible();
   });
 
-  it("controls auto-hide after 3 seconds of no mouse movement", () => {
-    render(<DesktopControls />);
-    act(() => {
-      vi.advanceTimersByTime(3100);
-    });
+  it("controls hide when visible prop is false", () => {
+    render(<DesktopControls visible={false} />);
     const overlay = screen.getByTestId("desktop-controls-overlay");
-    // Controls should be hidden (opacity-0 or aria-hidden)
     expect(overlay).toHaveAttribute("data-visible", "false");
   });
 

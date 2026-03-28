@@ -98,9 +98,13 @@ export function MobileControls({
         0,
         Math.min(duration, currentTime + direction * SEEK_AMOUNT),
       );
-      setCurrentTime(newTime);
+      if (playerRef?.current) {
+        playerRef.current.seek(newTime);
+      } else {
+        setCurrentTime(newTime);
+      }
     },
-    [currentTime, duration, setCurrentTime],
+    [currentTime, duration, playerRef, setCurrentTime],
   );
 
   return (

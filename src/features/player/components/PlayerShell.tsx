@@ -19,7 +19,10 @@ import { VideoElement } from "./VideoElement";
 import type { VideoElementHandle } from "./VideoElement";
 import { SeekIndicator } from "./SeekIndicator";
 import { SpeedIndicator } from "./SpeedIndicator";
+import { PlayerOSD } from "./PlayerOSD";
+import type { OSDAction } from "./PlayerOSD";
 import { useStreamUrl } from "../api";
+import { useProgressTracking } from "../hooks/useProgressTracking";
 
 export function PlayerShell() {
   const status = usePlayerStore((s) => s.status);
@@ -39,8 +42,12 @@ export function PlayerShell() {
   const currentQuality = usePlayerStore((s) => s.currentQuality);
   const currentSubtitle = usePlayerStore((s) => s.currentSubtitle);
   const playbackRate = usePlayerStore((s) => s.playbackRate);
+  const retryCount = usePlayerStore((s) => s.retryCount);
 
   const { deviceClass, isTVMode } = useDeviceContext();
+
+  // Save watch progress to backend (every 10s, on unmount)
+  useProgressTracking(currentStreamId ?? "", streamType ?? "vod");
   const playerRef = useRef<VideoElementHandle>(null);
   const [controlsVisible, setControlsVisible] = useState(true);
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -49,6 +56,7 @@ export function PlayerShell() {
     "forward" | "backward" | null
   >(null);
   const [seekCount, setSeekCount] = useState(0);
+  const [osdAction, setOsdAction] = useState<OSDAction | null>(null);
 
   // Fetch stream URL (only when active)
   const { data: streamData } = useStreamUrl(
@@ -150,6 +158,19 @@ export function PlayerShell() {
     playerRef.current?.setPlaybackRate(playbackRate);
   }, [playbackRate]);
 
+  // OSD feedback callback
+  const fireOSD = useCallback(
+    (type: string, value?: number, speed?: number) => {
+      setOsdAction({
+        type: type as OSDAction["type"],
+        value,
+        speed,
+        timestamp: Date.now(),
+      });
+    },
+    [],
+  );
+
   // Keyboard seek handler — bridges to video element
   const handleSeek = useCallback((time: number) => {
     const currentState = usePlayerStore.getState();
@@ -165,6 +186,9 @@ export function PlayerShell() {
     onChannelUp: isLive ? playNextEpisode : undefined,
     onChannelDown: isLive ? playPrevEpisode : undefined,
     onSeek: handleSeek,
+    onOSD: fireOSD,
+    controlsVisible,
+    onShowControls: showControls,
   });
 
   // Idle → render nothing
@@ -202,6 +226,7 @@ export function PlayerShell() {
           format={streamData.format}
           startTime={startTime}
           isTVMode={isTVMode}
+          retryCount={retryCount}
           onStatusChange={handleStatusChange}
           onTimeUpdate={handleTimeUpdate}
           onEnded={hasNext ? playNextEpisode : undefined}
@@ -210,6 +235,9 @@ export function PlayerShell() {
 
       {/* Buffering / loading overlay */}
       {(status === "buffering" || status === "loading") && <BufferingOverlay />}
+
+      {/* On-screen display — visual feedback for all actions */}
+      <PlayerOSD action={osdAction} />
 
       {/* Seek direction indicator */}
       <SeekIndicator direction={seekDirection} seekCount={seekCount} />

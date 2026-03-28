@@ -404,6 +404,7 @@ describe("usePlayerKeyboard (v2) — cleanup", () => {
     expect(removeEventListenerSpy).toHaveBeenCalledWith(
       "keydown",
       expect.any(Function),
+      { capture: true },
     );
   });
 });
