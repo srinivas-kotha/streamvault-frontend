@@ -241,7 +241,6 @@ export function SportsPage() {
                       <ChannelCard
                         key={channel.id}
                         channelName={channel.name}
-                        channelNumber={parseInt(channel.id) || 0}
                         logoUrl={channel.icon || ""}
                         isLive={true}
                         onClick={() => handlePlay(channel)}
@@ -263,7 +262,6 @@ export function SportsPage() {
                         key={item.id}
                         focusKey={`sports-${item.id}`}
                         channelName={item.name}
-                        channelNumber={parseInt(item.id) || 0}
                         logoUrl={item.icon || ""}
                         isLive={true}
                         onClick={() => handlePlay(item)}
