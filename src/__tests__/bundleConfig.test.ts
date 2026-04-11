@@ -25,6 +25,12 @@ function manualChunks(id: string): string | undefined {
   if (id.includes("node_modules/mpegts")) {
     return "vendor-mpegts";
   }
+  if (id.includes("node_modules/@noriginmedia")) {
+    return "vendor-spatial-nav";
+  }
+  if (id.includes("node_modules/zustand")) {
+    return "vendor-zustand";
+  }
   return undefined;
 }
 
@@ -101,17 +107,45 @@ describe("Vite manualChunks — bundle splitting", () => {
     ).toBe("vendor-mpegts");
   });
 
+  // ── Spatial navigation vendor chunk ────────────────────────────────────
+
+  it("returns 'vendor-spatial-nav' for @noriginmedia paths", () => {
+    expect(
+      manualChunks(
+        "/home/user/project/node_modules/@noriginmedia/norigin-spatial-navigation/dist/index.js",
+      ),
+    ).toBe("vendor-spatial-nav");
+  });
+
+  it("returns 'vendor-spatial-nav' for @noriginmedia subpaths", () => {
+    expect(
+      manualChunks(
+        "/home/user/project/node_modules/@noriginmedia/norigin-spatial-navigation/src/SpatialNavigation.ts",
+      ),
+    ).toBe("vendor-spatial-nav");
+  });
+
+  // ── Zustand vendor chunk ───────────────────────────────────────────────
+
+  it("returns 'vendor-zustand' for zustand paths", () => {
+    expect(
+      manualChunks("/home/user/project/node_modules/zustand/esm/vanilla.mjs"),
+    ).toBe("vendor-zustand");
+  });
+
+  it("returns 'vendor-zustand' for zustand middleware paths", () => {
+    expect(
+      manualChunks(
+        "/home/user/project/node_modules/zustand/esm/middleware/immer.mjs",
+      ),
+    ).toBe("vendor-zustand");
+  });
+
   // ── App code (no chunk) ────────────────────────────────────────────────
 
   it("returns undefined for app source code", () => {
     expect(
       manualChunks("/home/user/project/src/features/player/PlayerPage.tsx"),
-    ).toBeUndefined();
-  });
-
-  it("returns undefined for other node_modules", () => {
-    expect(
-      manualChunks("/home/user/project/node_modules/zustand/esm/vanilla.mjs"),
     ).toBeUndefined();
   });
 

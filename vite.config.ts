@@ -42,11 +42,12 @@ export default defineConfig({
   },
   build: {
     target: ["es2019", "chrome69"],
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
-        // Performance budget: <400KB gzipped for initial page load.
+        // Performance budget: <500KB gzipped total, <300KB initial load.
         // vendor-hls and vendor-mpegts are deferred (dynamic import in VideoElement/VideoPlayer)
-        // and excluded from the initial load budget (~213KB initial vs ~439KB total).
+        // and excluded from the initial load budget.
         manualChunks(id) {
           if (
             id.includes("node_modules/react-dom") ||
@@ -62,6 +63,12 @@ export default defineConfig({
           }
           if (id.includes("node_modules/mpegts")) {
             return "vendor-mpegts";
+          }
+          if (id.includes("node_modules/@noriginmedia")) {
+            return "vendor-spatial-nav";
+          }
+          if (id.includes("node_modules/zustand")) {
+            return "vendor-zustand";
           }
         },
       },
