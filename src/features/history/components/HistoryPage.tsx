@@ -10,7 +10,7 @@ import { useWatchHistory, useClearHistory } from "../api";
 import { usePlayerStore } from "@lib/store";
 import { EmptyState } from "@shared/components/EmptyState";
 import { LandscapeCard } from "@/design-system";
-import { formatTimeAgo } from "@shared/utils/formatDuration";
+import { formatDuration, formatTimeAgo } from "@shared/utils/formatDuration";
 import { PageTransition } from "@shared/components/PageTransition";
 import type { ContentType } from "@shared/types/api";
 
@@ -160,15 +160,36 @@ export function HistoryPage() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
               {filteredHistory.map((item) => (
-                <LandscapeCard
+                <div
                   key={`${item.content_type}-${item.content_id}-${item.id}`}
-                  focusKey={`history-item-${item.content_type}-${item.content_id}-${item.id}`}
-                  title={item.content_name || `${item.content_type} #${item.content_id}`}
-                  imageUrl={item.content_icon || ""}
-                  subtitle={formatTimeAgo(item.watched_at)}
-                  progress={getProgressPercent(item)}
-                  onClick={() => handleItemClick(item)}
-                />
+                  data-testid="history-item"
+                  className="relative"
+                >
+                  <h3 className="sr-only">{item.content_name || `${item.content_type} #${item.content_id}`}</h3>
+                  <LandscapeCard
+                    focusKey={`history-item-${item.content_type}-${item.content_id}-${item.id}`}
+                    title={item.content_name || `${item.content_type} #${item.content_id}`}
+                    imageUrl={item.content_icon || ""}
+                    subtitle={formatTimeAgo(item.watched_at)}
+                    progress={getProgressPercent(item)}
+                    onClick={() => handleItemClick(item)}
+                  />
+                  <div className="absolute top-2 left-2 z-10 pointer-events-none">
+                    <span className="text-[10px] text-text-secondary bg-bg-primary/60 px-1.5 py-0.5 rounded">
+                      {item.content_type === "live" ? "live" : item.content_type}
+                    </span>
+                  </div>
+                  <div className="absolute bottom-5 left-2 z-10 pointer-events-none">
+                    <span className="text-[10px] font-medium text-teal">Continue</span>
+                  </div>
+                  {item.duration_seconds > 0 && (
+                    <div className="absolute bottom-5 right-2 z-10 pointer-events-none">
+                      <span className="text-[10px] text-text-secondary">
+                        {formatDuration(item.progress_seconds)} / {formatDuration(item.duration_seconds)}
+                      </span>
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           )}

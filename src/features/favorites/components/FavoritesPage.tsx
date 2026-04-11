@@ -157,6 +157,7 @@ export function FavoritesPage() {
                     logoUrl={fav.content_icon || ""}
                     focusKey={`fav-${fav.content_type}-${fav.content_id}`}
                     onClick={() => handleClick(fav)}
+                    {...({ onFavoriteToggle: () => handleRemove(fav.content_id, fav.content_type) } as any)}
                   />
                 ) : (
                   <PosterCard

@@ -59,7 +59,6 @@ export function SearchResultsList({
                 <ChannelCard
                   key={`live-${stream.id}`}
                   channelName={stream.name}
-                  channelNumber={parseInt(stream.id) || 0}
                   logoUrl={stream.icon || ""}
                   isLive={true}
                   focusKey={`search-live-${stream.id}`}
