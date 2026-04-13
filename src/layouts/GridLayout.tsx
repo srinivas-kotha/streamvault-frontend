@@ -32,7 +32,7 @@ export function GridLayout({
   children,
 }: GridLayoutProps) {
   return (
-    <div className="min-h-screen px-6 lg:px-10 py-6" data-testid="grid-layout">
+    <div className="min-h-screen px-6 lg:px-12 py-6" data-testid="grid-layout">
       {/* Page header */}
       <header className="mb-6">
         <h1 className="text-2xl lg:text-3xl font-bold text-text-primary font-[family-name:var(--font-family-heading)] tracking-tight">

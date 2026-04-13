@@ -6,3 +6,4 @@ export { MobileLayout } from "./MobileLayout";
 export { HomeLayout } from "./HomeLayout";
 export { GridLayout } from "./GridLayout";
 export { DetailLayout } from "./DetailLayout";
+export { PlayerLayout } from "./PlayerLayout";

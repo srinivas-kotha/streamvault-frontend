@@ -31,7 +31,7 @@ export function HomeLayout({ hero, children }: HomeLayoutProps) {
       </section>
 
       {/* Content rails: standard page padding, vertical spacing */}
-      <div className="flex flex-col gap-8 py-8 px-6 lg:px-10">{children}</div>
+      <div className="flex flex-col gap-8 py-8 px-6 lg:px-12">{children}</div>
     </div>
   );
 }

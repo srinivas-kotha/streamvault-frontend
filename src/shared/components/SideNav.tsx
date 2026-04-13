@@ -203,7 +203,7 @@ export function SideNav({ onExpandChange }: SideNavProps) {
       focusKey: "side-nav",
       saveLastFocusedChild: true,
       // Prevent D-pad from escaping left or right out of the sidebar
-      isFocusBoundary: false,
+      isFocusBoundary: true,
     });
 
   const expand = useCallback(() => {

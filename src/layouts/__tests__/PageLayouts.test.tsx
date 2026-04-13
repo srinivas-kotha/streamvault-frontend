@@ -1,6 +1,6 @@
 /**
  * Page layout template tests — SRI-19
- * Covers: HomeLayout, GridLayout, DetailLayout
+ * Covers: HomeLayout, GridLayout, DetailLayout, PlayerLayout
  */
 
 import { describe, it, expect } from "vitest";
@@ -8,6 +8,7 @@ import { render, screen } from "@testing-library/react";
 import { HomeLayout } from "../HomeLayout";
 import { GridLayout } from "../GridLayout";
 import { DetailLayout } from "../DetailLayout";
+import { PlayerLayout } from "../PlayerLayout";
 
 // ── HomeLayout ────────────────────────────────────────────────────────────────
 
@@ -171,5 +172,99 @@ describe("DetailLayout", () => {
     // Only the hero section should be present, no extra flex-col div
     const flexDivs = container.querySelectorAll(".flex-col.gap-8");
     expect(flexDivs.length).toBe(0);
+  });
+});
+
+// ── PlayerLayout ──────────────────────────────────────────────────────────────
+
+describe("PlayerLayout", () => {
+  it("renders the player-layout test id", () => {
+    render(
+      <PlayerLayout
+        videoSlot={<video data-testid="video" />}
+        title="Inception"
+      />,
+    );
+    expect(screen.getByTestId("player-layout")).toBeInTheDocument();
+  });
+
+  it("renders section with aria-label containing the title", () => {
+    render(<PlayerLayout videoSlot={<video />} title="Interstellar" />);
+    expect(screen.getByLabelText("Playing Interstellar")).toBeInTheDocument();
+  });
+
+  it("renders the video slot in the full-bleed area", () => {
+    render(
+      <PlayerLayout
+        videoSlot={<video data-testid="video-player" />}
+        title="Film"
+      />,
+    );
+    expect(screen.getByTestId("video-player")).toBeInTheDocument();
+  });
+
+  it("renders OSD slot when provided", () => {
+    render(
+      <PlayerLayout
+        videoSlot={<video />}
+        osdSlot={<div data-testid="controls">Controls</div>}
+        title="Film"
+      />,
+    );
+    expect(screen.getByTestId("controls")).toBeInTheDocument();
+    expect(screen.getByLabelText("Playback controls")).toBeInTheDocument();
+  });
+
+  it("omits OSD overlay when osdSlot is not provided", () => {
+    render(<PlayerLayout videoSlot={<video />} title="Film" />);
+    expect(
+      screen.queryByLabelText("Playback controls"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders title as h1 in metadata section", () => {
+    render(<PlayerLayout videoSlot={<video />} title="The Matrix" />);
+    expect(
+      screen.getByRole("heading", { level: 1, name: "The Matrix" }),
+    ).toBeInTheDocument();
+  });
+
+  it("renders subtitle when provided", () => {
+    render(
+      <PlayerLayout
+        videoSlot={<video />}
+        title="Film"
+        subtitle="2h 16m · Sci-Fi"
+      />,
+    );
+    expect(screen.getByText("2h 16m · Sci-Fi")).toBeInTheDocument();
+  });
+
+  it("renders description when provided", () => {
+    render(
+      <PlayerLayout
+        videoSlot={<video />}
+        title="Film"
+        description="A computer hacker learns the truth."
+      />,
+    );
+    expect(
+      screen.getByText("A computer hacker learns the truth."),
+    ).toBeInTheDocument();
+  });
+
+  it("renders related content rail children", () => {
+    render(
+      <PlayerLayout videoSlot={<video />} title="Film">
+        <div data-testid="related-rail" />
+      </PlayerLayout>,
+    );
+    expect(screen.getByTestId("related-rail")).toBeInTheDocument();
+    expect(screen.getByLabelText("Related content")).toBeInTheDocument();
+  });
+
+  it("omits related content section when no children", () => {
+    render(<PlayerLayout videoSlot={<video />} title="Film" />);
+    expect(screen.queryByLabelText("Related content")).not.toBeInTheDocument();
   });
 });
