@@ -1,121 +1,157 @@
+/**
+ * AuthenticatedLayout — SRI-19: replaced horizontal GlobalNav tabs with
+ * collapsible SideNav sidebar. TopNav replaced by a minimal top bar with
+ * just the profile menu; branding lives in the SideNav.
+ */
+import { useState, useCallback } from "react";
 import {
   createLazyFileRoute,
   Outlet,
-  Link,
-  useParams,
+  useNavigate,
 } from "@tanstack/react-router";
-import { TopNav } from "@shared/components/TopNav";
+import { SideNav } from "@shared/components/SideNav";
 import { useAuthCheck } from "@features/auth/hooks/useAuth";
 import { useBackNavigation } from "@shared/hooks/useBackNavigation";
 import { useTokenRefresh } from "@features/auth/hooks/useTokenRefresh";
 import {
-  useSpatialFocusable,
   useSpatialContainer,
   FocusContext,
+  useSpatialFocusable,
 } from "@shared/hooks/useSpatialNav";
+import { useAuthStore } from "@lib/store";
+import { useLogout } from "@features/auth/hooks/useAuth";
 
 export const Route = createLazyFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
 });
 
-const GLOBAL_NAV = [
-  { to: "/language/telugu", key: "telugu", label: "Telugu" },
-  { to: "/language/hindi", key: "hindi", label: "Hindi" },
-  { to: "/language/english", key: "english", label: "English" },
-  { to: "/sports", key: "sports", label: "Sports" },
-  { to: "/search", key: "search", label: "Search" },
-];
+const SIDEBAR_COLLAPSED_PX = 52;
+const SIDEBAR_EXPANDED_PX = 220;
 
-function GlobalNavLink({
-  to,
-  navKey,
-  label,
-  isActive,
-}: {
-  to: string;
-  navKey: string;
-  label: string;
-  isActive: boolean;
-}) {
+// ---------------------------------------------------------------------------
+// Minimal profile button (self-contained, no modal complexity)
+// ---------------------------------------------------------------------------
+
+function ProfileButton() {
+  const username = useAuthStore((s) => s.username);
+  const logoutMutation = useLogout();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+
   const { ref, showFocusRing, focusProps } = useSpatialFocusable({
-    focusKey: `global-nav-${navKey}`,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onEnterPress: () => {
-      window.location.href = to;
-    },
+    focusKey: "profile-btn",
+    onEnterPress: () => setOpen((v) => !v),
   });
 
   return (
-    <Link
-      ref={ref}
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      to={to as any}
-      {...focusProps}
-      className={`relative px-5 py-2.5 text-sm font-semibold transition-[background-color,border-color,color] min-h-[44px] rounded-lg ${
-        isActive
-          ? "text-teal bg-teal/10 border border-teal/30"
-          : showFocusRing
-            ? "text-text-primary bg-surface-raised/50 ring-2 ring-teal/50"
-            : "text-text-secondary hover:text-text-primary hover:bg-surface-raised/30"
-      }`}
-    >
-      {label}
-    </Link>
+    <div className="relative">
+      <button
+        ref={ref}
+        {...focusProps}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((v) => !v);
+        }}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className={`flex items-center gap-2 px-3 py-2 rounded-lg min-h-[44px]
+          text-text-secondary hover-capable:hover:text-text-primary
+          hover-capable:hover:bg-surface-raised/50
+          transition-[background-color,color] duration-150
+          ${showFocusRing ? "ring-2 ring-accent-teal/60 text-text-primary" : ""}`}
+      >
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent-teal to-accent-indigo flex items-center justify-center text-sm font-bold text-bg-primary">
+          {username?.[0]?.toUpperCase() ?? "U"}
+        </div>
+        <span className="text-sm hidden lg:block">{username}</span>
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full mt-1 w-44 bg-surface-raised border border-border rounded-lg shadow-xl z-50 py-1"
+          onClick={() => setOpen(false)}
+        >
+          <button
+            role="menuitem"
+            className="w-full text-left px-4 py-2.5 text-sm text-text-secondary hover-capable:hover:text-text-primary hover-capable:hover:bg-surface-hover transition-colors"
+            onClick={() =>
+              navigate({
+                to: "/settings" as Parameters<typeof navigate>[0]["to"],
+              })
+            }
+          >
+            Settings
+          </button>
+          <div className="my-1 border-t border-border-subtle" />
+          <button
+            role="menuitem"
+            className="w-full text-left px-4 py-2.5 text-sm text-text-secondary hover-capable:hover:text-text-primary hover-capable:hover:bg-surface-hover transition-colors"
+            onClick={() => logoutMutation.mutate()}
+          >
+            Sign out
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Root layout
+// ---------------------------------------------------------------------------
 
 function AuthenticatedLayout() {
   useAuthCheck();
   useBackNavigation();
   useTokenRefresh();
 
-  // Detect current route for active state
-  const params = useParams({ strict: false }) as { lang?: string };
-  const currentPath =
-    typeof window !== "undefined" ? window.location.pathname : "";
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
 
-  // Container for global nav bar — gives norigin a proper parent so D-pad
-  // can cross between nav and page content (fixes FocusContext isolation).
-  const { ref: globalNavRef, focusKey: globalNavFocusKey } =
-    useSpatialContainer({
-      focusKey: "global-nav",
-      saveLastFocusedChild: true,
-    });
+  const handleExpandChange = useCallback((expanded: boolean) => {
+    setSidebarExpanded(expanded);
+  }, []);
+
+  const { ref: contentRef, focusKey: contentFocusKey } = useSpatialContainer({
+    focusKey: "main-content",
+    saveLastFocusedChild: true,
+  });
+
+  const sidebarWidth = sidebarExpanded
+    ? SIDEBAR_EXPANDED_PX
+    : SIDEBAR_COLLAPSED_PX;
 
   return (
-    <div className="min-h-screen bg-obsidian">
-      <TopNav />
-      <main
-        id="main-content"
-        tabIndex={-1}
-        className="min-h-screen pt-14 px-6 lg:px-10 overflow-y-auto scrollbar-hide focus:outline-none"
+    <div className="min-h-screen bg-obsidian flex">
+      {/* Skip-to-content (accessibility) */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[60] focus:px-4 focus:py-2 focus:bg-accent-teal focus:text-bg-primary focus:rounded-md focus:font-semibold"
       >
-        {/* Global navigation — always visible.
-            FocusContext.Provider anchors the nav links under the global-nav
-            container so norigin can traverse up/down between nav and page content. */}
-        <FocusContext.Provider value={globalNavFocusKey}>
-          <div ref={globalNavRef} className="pt-2 pb-2">
-            <div className="flex items-center gap-2">
-              {GLOBAL_NAV.map((item) => (
-                <GlobalNavLink
-                  key={item.key}
-                  to={item.to}
-                  navKey={item.key}
-                  label={item.label}
-                  isActive={
-                    item.key === "sports"
-                      ? currentPath === "/sports"
-                      : item.key === "search"
-                        ? currentPath === "/search"
-                        : params.lang === item.key
-                  }
-                />
-              ))}
-            </div>
-          </div>
-        </FocusContext.Provider>
-        <Outlet />
-      </main>
+        Skip to content
+      </a>
+
+      {/* Collapsible sidebar */}
+      <SideNav onExpandChange={handleExpandChange} />
+
+      {/* Main content area — offset by sidebar width */}
+      <FocusContext.Provider value={contentFocusKey}>
+        <div
+          ref={contentRef}
+          className="flex-1 min-h-screen overflow-y-auto scrollbar-hide focus:outline-none transition-[margin-left] duration-200 ease-out"
+          style={{ marginLeft: sidebarWidth }}
+        >
+          {/* Slim top bar: profile only, branding is in SideNav */}
+          <header className="sticky top-0 z-30 flex items-center justify-end px-6 h-12 bg-bg-primary/80 backdrop-blur-md border-b border-border-subtle">
+            <ProfileButton />
+          </header>
+
+          {/* Page content */}
+          <main id="main-content" tabIndex={-1} className="focus:outline-none">
+            <Outlet />
+          </main>
+        </div>
+      </FocusContext.Provider>
     </div>
   );
 }
