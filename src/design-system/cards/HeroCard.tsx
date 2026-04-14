@@ -1,5 +1,6 @@
-import { useState, memo, useCallback, type ReactNode } from 'react';
-import { cn } from '@/shared/utils/cn';
+import { useState, memo, useCallback, type ReactNode } from "react";
+import { cn } from "@/shared/utils/cn";
+import { useBlurUp } from "@/shared/hooks/useBlurUp";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -23,7 +24,7 @@ function HeroFallback({ title }: { title: string }) {
     <div
       aria-hidden="true"
       className="absolute inset-0 flex items-end"
-      style={{ background: 'var(--gradient-brand)' }}
+      style={{ background: "var(--gradient-brand)" }}
     >
       {/* Subtle darkening overlay so text content remains readable */}
       <div className="absolute inset-0 bg-bg-primary/40" />
@@ -57,6 +58,7 @@ export const HeroCard = memo(function HeroCard({
   className,
 }: HeroCardProps) {
   const [imgError, setImgError] = useState(false);
+  const { imgProps, imgClass } = useBlurUp();
 
   const handleImgError = useCallback(() => {
     setImgError(true);
@@ -65,11 +67,11 @@ export const HeroCard = memo(function HeroCard({
   return (
     <div
       className={cn(
-        'relative w-full overflow-hidden',
-        'rounded-[var(--radius-xl)]',
+        "relative w-full overflow-hidden",
+        "rounded-[var(--radius-xl)]",
         // Fluid height — min on mobile, larger on desktop
-        'min-h-[200px] md:min-h-[300px]',
-        'bg-bg-secondary',
+        "min-h-[200px] md:min-h-[300px]",
+        "bg-bg-secondary",
         className,
       )}
     >
@@ -82,7 +84,11 @@ export const HeroCard = memo(function HeroCard({
           loading="eager"
           decoding="async"
           onError={handleImgError}
-          className="absolute inset-0 w-full h-full object-cover object-center"
+          {...imgProps}
+          className={cn(
+            "absolute inset-0 w-full h-full object-cover object-center",
+            imgClass,
+          )}
           draggable={false}
         />
       ) : (
@@ -93,7 +99,7 @@ export const HeroCard = memo(function HeroCard({
       <div
         aria-hidden="true"
         className="absolute inset-0 pointer-events-none"
-        style={{ background: 'var(--gradient-hero)' }}
+        style={{ background: "var(--gradient-hero)" }}
       />
 
       {/* Subtle top vignette — softens the image top edge */}
@@ -107,12 +113,12 @@ export const HeroCard = memo(function HeroCard({
         {/* Title */}
         <h2
           className={cn(
-            'font-bold text-text-primary font-[family-name:var(--font-family-heading)]',
-            'text-3xl md:text-4xl',
+            "font-bold text-text-primary font-[family-name:var(--font-family-heading)]",
+            "text-3xl md:text-4xl",
             // TV: clamp ensures readable at 10ft
-            'leading-tight',
+            "leading-tight",
             // Max width keeps line length readable on ultra-wide screens
-            'max-w-2xl',
+            "max-w-2xl",
           )}
         >
           {title}
@@ -122,11 +128,11 @@ export const HeroCard = memo(function HeroCard({
         {description && (
           <p
             className={cn(
-              'mt-2 text-text-secondary leading-relaxed',
-              'text-sm md:text-base',
-              'max-w-xl',
+              "mt-2 text-text-secondary leading-relaxed",
+              "text-sm md:text-base",
+              "max-w-xl",
               // Clamp to 3 lines — avoids hero taking up entire viewport
-              'line-clamp-3',
+              "line-clamp-3",
             )}
           >
             {description}

@@ -255,6 +255,47 @@
   }
 }
 
+/* Skeleton shimmer sweep (SRI-40) */
+@keyframes shimmer {
+  from {
+    background-position: -200% center;
+  }
+  to {
+    background-position: 200% center;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-tertiary) 25%,
+    rgba(255, 255, 255, 0.06) 50%,
+    var(--color-bg-tertiary) 75%
+  );
+  background-size: 200% auto;
+  animation: shimmer 1.6s linear infinite;
+}
+
+/* Favorite heart pop on toggle (SRI-40) */
+@keyframes favorite-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.45);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-favorite-pop {
+  animation: favorite-pop 0.35s ease-out both;
+}
+
 /* ============================================================
    Reduced Motion — Sprint 6C Accessibility
    Applies when user has prefers-reduced-motion: reduce set
@@ -295,6 +336,17 @@
   .animate-spin {
     animation: none !important;
   }
+
+  /* Skeleton shimmer: static base color */
+  .animate-shimmer {
+    animation: none !important;
+    background: var(--color-bg-tertiary) !important;
+  }
+
+  /* Favorite pop: skip animation */
+  .animate-favorite-pop {
+    animation: none !important;
+  }
 }
 
 /* Class-based variant for JS-driven control via useReducedMotion hook */
@@ -324,5 +376,14 @@ html.motion-reduced .animate-pulse {
 }
 
 html.motion-reduced .animate-spin {
+  animation: none !important;
+}
+
+html.motion-reduced .animate-shimmer {
+  animation: none !important;
+  background: var(--color-bg-tertiary) !important;
+}
+
+html.motion-reduced .animate-favorite-pop {
   animation: none !important;
 }

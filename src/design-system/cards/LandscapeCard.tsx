@@ -1,5 +1,6 @@
-import { useState, memo, useCallback } from 'react';
-import { cn } from '@/shared/utils/cn';
+import { useState, memo, useCallback } from "react";
+import { cn } from "@/shared/utils/cn";
+import { useBlurUp } from "@/shared/hooks/useBlurUp";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -75,6 +76,7 @@ export const LandscapeCard = memo(function LandscapeCard({
   focusKey,
 }: LandscapeCardProps) {
   const [imgError, setImgError] = useState(false);
+  const { imgProps, imgClass } = useBlurUp();
 
   const handleImgError = useCallback(() => {
     setImgError(true);
@@ -82,7 +84,7 @@ export const LandscapeCard = memo(function LandscapeCard({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if ((e.key === 'Enter' || e.key === ' ') && onClick) onClick();
+      if ((e.key === "Enter" || e.key === " ") && onClick) onClick();
     },
     [onClick],
   );
@@ -92,29 +94,29 @@ export const LandscapeCard = memo(function LandscapeCard({
   return (
     <div
       data-focus-key={focusKey}
-      role={onClick ? 'button' : undefined}
+      role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
       aria-label={subtitle ? `${title} — ${subtitle}` : title}
       onClick={onClick}
       onKeyDown={onClick ? handleKeyDown : undefined}
       className={cn(
         // Sizing: 200px mobile → 300px desktop → 400px TV (set by parent rail/grid)
-        'relative cursor-pointer select-none',
-        'rounded-[var(--radius-lg)] overflow-hidden',
+        "relative cursor-pointer select-none",
+        "rounded-[var(--radius-lg)] overflow-hidden",
         // 16:9 aspect
-        'aspect-video',
-        'bg-bg-secondary',
+        "aspect-video",
+        "bg-bg-secondary",
         // Border (transparent base, revealed on hover/focus)
-        'border border-transparent',
+        "border border-transparent",
         // Hover — mouse only (TV has no hover, avoids phantom scale on remote nav)
-        'hover-capable:border-accent-teal/30',
+        "hover-capable:border-accent-teal/30",
         // Specific transition props — NO transition-all
-        'transition-[transform,box-shadow,border-color] duration-200 ease-out',
+        "transition-[transform,box-shadow,border-color] duration-200 ease-out",
         // Keyboard focus ring
-        'focus-visible:outline-none',
-        'focus-visible:ring-2 focus-visible:ring-accent-teal focus-visible:ring-offset-2 focus-visible:ring-offset-bg-primary',
-        'focus-visible:scale-[1.04]',
-        'focus-visible:shadow-[var(--shadow-focus-tv)]',
+        "focus-visible:outline-none",
+        "focus-visible:ring-2 focus-visible:ring-accent-teal focus-visible:ring-offset-2 focus-visible:ring-offset-bg-primary",
+        "focus-visible:scale-[1.04]",
+        "focus-visible:shadow-[var(--shadow-focus-tv)]",
         className,
       )}
     >
@@ -126,7 +128,11 @@ export const LandscapeCard = memo(function LandscapeCard({
           loading="lazy"
           decoding="async"
           onError={handleImgError}
-          className="absolute inset-0 w-full h-full object-cover"
+          {...imgProps}
+          className={cn(
+            "absolute inset-0 w-full h-full object-cover",
+            imgClass,
+          )}
           draggable={false}
         />
       ) : (
@@ -151,8 +157,8 @@ export const LandscapeCard = memo(function LandscapeCard({
       {/* Text overlay — bottom */}
       <div
         className={cn(
-          'absolute inset-x-0 bottom-0 px-2.5 pointer-events-none',
-          hasProgress ? 'pb-3.5' : 'pb-2.5',
+          "absolute inset-x-0 bottom-0 px-2.5 pointer-events-none",
+          hasProgress ? "pb-3.5" : "pb-2.5",
         )}
       >
         <p className="font-medium text-text-primary truncate font-[family-name:var(--font-family-heading)] text-xs leading-snug">

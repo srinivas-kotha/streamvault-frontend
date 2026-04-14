@@ -19,6 +19,25 @@ afterAll(() => server.close());
 
 // ── jsdom polyfills ─────────────────────────────────────────────────────────
 
+// jsdom does not implement window.matchMedia — polyfill it so hooks that call
+// window.matchMedia(query) (e.g. useReducedMotion) don't throw in tests.
+// Default: prefers-reduced-motion is NOT set (matches = false).
+if (typeof window.matchMedia === "undefined") {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: (query: string): MediaQueryList => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  });
+}
+
 // jsdom does not implement PointerEvent — polyfill it as a subclass of MouseEvent
 if (typeof globalThis.PointerEvent === "undefined") {
   // @ts-expect-error -- intentional polyfill for test environment

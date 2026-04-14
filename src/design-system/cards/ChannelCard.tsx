@@ -1,5 +1,6 @@
 import { useState, memo, useCallback } from "react";
 import { cn } from "@/shared/utils/cn";
+import { useBlurUp } from "@/shared/hooks/useBlurUp";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -50,6 +51,7 @@ export const ChannelCard = memo(function ChannelCard({
   focusKey,
 }: ChannelCardProps) {
   const [imgError, setImgError] = useState(false);
+  const { imgProps, imgClass } = useBlurUp();
 
   const handleImgError = useCallback(() => {
     setImgError(true);
@@ -96,7 +98,11 @@ export const ChannelCard = memo(function ChannelCard({
           loading="lazy"
           decoding="async"
           onError={handleImgError}
-          className="absolute inset-0 w-full h-full object-cover"
+          {...imgProps}
+          className={cn(
+            "absolute inset-0 w-full h-full object-cover",
+            imgClass,
+          )}
           draggable={false}
         />
       ) : (

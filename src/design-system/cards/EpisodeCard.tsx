@@ -1,5 +1,6 @@
-import { useState, memo, useCallback } from 'react';
-import { cn } from '@/shared/utils/cn';
+import { useState, memo, useCallback } from "react";
+import { cn } from "@/shared/utils/cn";
+import { useBlurUp } from "@/shared/hooks/useBlurUp";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -66,8 +67,8 @@ function EpisodeFallback({ title }: { title: string }) {
 
 function formatEpisodeCode(season?: number, episode?: number): string | null {
   if (season === undefined || episode === undefined) return null;
-  const s = String(season).padStart(2, '0');
-  const e = String(episode).padStart(2, '0');
+  const s = String(season).padStart(2, "0");
+  const e = String(episode).padStart(2, "0");
   return `S${s}E${e}`;
 }
 
@@ -88,6 +89,7 @@ export const EpisodeCard = memo(function EpisodeCard({
   focusKey,
 }: EpisodeCardProps) {
   const [imgError, setImgError] = useState(false);
+  const { imgProps, imgClass } = useBlurUp();
 
   const handleImgError = useCallback(() => {
     setImgError(true);
@@ -95,13 +97,14 @@ export const EpisodeCard = memo(function EpisodeCard({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if ((e.key === 'Enter' || e.key === ' ') && onClick) onClick();
+      if ((e.key === "Enter" || e.key === " ") && onClick) onClick();
     },
     [onClick],
   );
 
   const hasProgress = progress !== undefined && progress > 0;
-  const clampedProgress = progress !== undefined ? Math.min(100, Math.max(0, progress)) : undefined;
+  const clampedProgress =
+    progress !== undefined ? Math.min(100, Math.max(0, progress)) : undefined;
   const episodeCode = formatEpisodeCode(season, episode);
 
   const ariaLabel = duration ? `${title} — ${duration}` : title;
@@ -109,20 +112,20 @@ export const EpisodeCard = memo(function EpisodeCard({
   return (
     <div
       data-focus-key={focusKey}
-      role={onClick ? 'button' : undefined}
+      role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
       aria-label={ariaLabel}
       onClick={onClick}
       onKeyDown={onClick ? handleKeyDown : undefined}
       className={cn(
-        'relative cursor-pointer select-none',
-        'rounded-[var(--radius-lg)] overflow-hidden',
-        'bg-bg-secondary',
-        'border border-transparent',
-        'hover-capable:border-accent-teal/30',
-        'transition-[transform,box-shadow,border-color] duration-200 ease-out',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal focus-visible:ring-offset-2 focus-visible:ring-offset-bg-primary',
-        'focus-visible:scale-[1.04] focus-visible:shadow-[var(--shadow-focus-tv)]',
+        "relative cursor-pointer select-none",
+        "rounded-[var(--radius-lg)] overflow-hidden",
+        "bg-bg-secondary",
+        "border border-transparent",
+        "hover-capable:border-accent-teal/30",
+        "transition-[transform,box-shadow,border-color] duration-200 ease-out",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal focus-visible:ring-offset-2 focus-visible:ring-offset-bg-primary",
+        "focus-visible:scale-[1.04] focus-visible:shadow-[var(--shadow-focus-tv)]",
         className,
       )}
     >
@@ -135,7 +138,11 @@ export const EpisodeCard = memo(function EpisodeCard({
             loading="lazy"
             decoding="async"
             onError={handleImgError}
-            className="absolute inset-0 w-full h-full object-cover"
+            {...imgProps}
+            className={cn(
+              "absolute inset-0 w-full h-full object-cover",
+              imgClass,
+            )}
             draggable={false}
           />
         ) : (
