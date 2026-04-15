@@ -1,4 +1,9 @@
-export { LayoutSelector } from './LayoutSelector';
-export { TVLayout } from './TVLayout';
-export { DesktopLayout } from './DesktopLayout';
-export { MobileLayout } from './MobileLayout';
+export { LayoutSelector } from "./LayoutSelector";
+export { TVLayout } from "./TVLayout";
+export { DesktopLayout } from "./DesktopLayout";
+export { MobileLayout } from "./MobileLayout";
+// SRI-19: new page layout templates
+export { HomeLayout } from "./HomeLayout";
+export { GridLayout } from "./GridLayout";
+export { DetailLayout } from "./DetailLayout";
+export { PlayerLayout } from "./PlayerLayout";

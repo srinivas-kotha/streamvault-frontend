@@ -1,5 +1,5 @@
-import { useDeviceContext } from "@/hooks/useDeviceContext";
-import { HeroBanner } from "./HeroBanner";
+import { HomeLayout } from "@/layouts/HomeLayout";
+import { CinematicHero } from "./CinematicHero";
 import { ContentRail } from "./ContentRail";
 import { ContinueWatchingRail } from "./ContinueWatchingRail";
 import { FeaturedRail } from "./FeaturedRail";
@@ -10,24 +10,22 @@ import { CategoryRail } from "./CategoryRail";
 // ---------------------------------------------------------------------------
 
 export function HomePage() {
-  const device = useDeviceContext();
-  // Device context available for TV-specific layout adjustments
-  void device;
-
   return (
-    <div className="pb-12">
-      <h1 className="sr-only">Home</h1>
-
-      {/* Hero banner */}
-      <HeroBanner
-        title="Featured Content"
-        description="Discover the latest and greatest content."
-        imageUrl="/hero-placeholder.jpg"
-        genres={["Drama", "Action"]}
-        rating="8.5"
-        onPlay={() => {}}
-      />
-
+    <HomeLayout
+      hero={
+        <CinematicHero
+          title="Featured Content"
+          description="Discover the latest and greatest content from your favourite channels and streaming sources."
+          backdropUrl="/hero-placeholder.jpg"
+          genres={["Drama", "Action", "Thriller"]}
+          rating="8.5"
+          year="2024"
+          duration="2h 18m"
+          onPlay={() => {}}
+          onAddToList={() => {}}
+        />
+      }
+    >
       {/* Continue Watching */}
       <ContinueWatchingRail />
 
@@ -40,6 +38,6 @@ export function HomePage() {
 
       {/* Generic content rail example */}
       <ContentRail title="Trending Now" items={[]} renderCard={() => null} />
-    </div>
+    </HomeLayout>
   );
 }
